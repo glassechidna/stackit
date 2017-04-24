@@ -5,8 +5,9 @@ go:
 
 install:
   - go get github.com/mitchellh/gox
-  - go get -v github.com/Masterminds/glide
-  - cd $GOPATH/src/github.com/Masterminds/glide && git checkout tags/v0.12.3 && go install && cd -
+  - curl -sL -o glide.tgz https://github.com/Masterminds/glide/releases/download/v0.12.3/glide-v0.12.3-linux-amd64.tar.gz
+  - tar -xvf glide.tgz
+  - mv linux-amd64/glide /usr/bin
   - glide install
 
 after_success:
