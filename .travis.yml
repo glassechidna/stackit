@@ -9,6 +9,8 @@ install:
   - tar -xvf glide.tgz
   - linux-amd64/glide install
 
+script: ls
+
 after_success:
   - gox -arch="amd64" -os="windows linux darwin"
 
