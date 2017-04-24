@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 	"os"
+	"os/signal"
 )
 
 type StackitUpInput struct {
@@ -49,6 +50,27 @@ func Up(region, profile string, input StackitUpInput, noDestroy, cancelOnExit bo
 
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	if cancelOnExit {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt)
+
+		go func() {
+			<- sigs
+
+			isNewStackCreation := mostRecentEventIdSeen == nil
+
+			if isNewStackCreation {
+				cfn.DeleteStack(&cloudformation.DeleteStackInput{
+					StackName: stackId,
+				})
+			} else {
+				cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+					StackName: stackId,
+				})
+			}
+		}()
 	}
 
 	TailStack(stackId, mostRecentEventIdSeen, cfn)
@@ -163,6 +185,14 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 
 func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*string, *string, error) {
 	if stackExists(input.StackName, cfn) {
+		describeResp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+			StackName: input.StackName,
+		})
+
+		if err != nil {
+			return nil, nil, err
+		}
+
 		resp, err := cfn.UpdateStack(&cloudformation.UpdateStackInput{
 			StackName: input.StackName,
 			Capabilities: input.Capabilities,
@@ -178,7 +208,7 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 		if err != nil {
 			return nil, nil, err
 		} else {
-			return resp.StackId, nil, nil
+			return resp.StackId, describeResp.StackEvents[0].EventId, nil
 		}
 	} else {
 		resp, err := cfn.CreateStack(&cloudformation.CreateStackInput{
