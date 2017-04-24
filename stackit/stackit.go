@@ -89,6 +89,22 @@ func Up(region, profile string, input StackitUpInput, noDestroy, cancelOnExit bo
 		TailStack(stackId, mostRecentEventIdSeen, cfn)
 	}
 
+	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: stackId,
+	})
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	outputMap := make(map[string]string)
+
+	for _, output := range resp.Stacks[0].Outputs {
+		outputMap[*output.OutputKey] = *output.OutputValue
+	}
+
+	bytes, err := json.MarshalIndent(outputMap, "", "  ")
+	fmt.Println(string(bytes))
 }
 
 func Down(region, profile, stackName string) {
