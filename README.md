@@ -1,5 +1,7 @@
 # `stackit`
 
+[![Build Status](https://travis-ci.org/glassechidna/stackit.svg?branch=master)](https://travis-ci.org/glassechidna/stackit)
+
 ## This README is full of lies. Right now it serves as more of a TODO for the developers.
 
 `stackit` is a CLI tool to synchronously and idempotently operate on AWS
