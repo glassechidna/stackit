@@ -10,6 +10,8 @@ import (
 	"time"
 	"os"
 	"os/signal"
+	"encoding/json"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 type StackitUpInput struct {
@@ -46,34 +48,47 @@ func CfnClient(profile, region string) *cloudformation.CloudFormation {
 
 func Up(region, profile string, input StackitUpInput, noDestroy, cancelOnExit bool) {
 	cfn := CfnClient(profile, region)
+
 	stackId, mostRecentEventIdSeen, err := doStackUp(input, cfn)
+	shouldTail := true
 
 	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	if cancelOnExit {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt)
-
-		go func() {
-			<- sigs
-
-			isNewStackCreation := mostRecentEventIdSeen == nil
-
-			if isNewStackCreation {
-				cfn.DeleteStack(&cloudformation.DeleteStackInput{
-					StackName: stackId,
-				})
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
+				shouldTail = false
 			} else {
-				cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
-					StackName: stackId,
-				})
+				log.Fatal(err.Error())
 			}
-		}()
+		} else {
+			log.Fatal(err.Error())
+		}
 	}
 
-	TailStack(stackId, mostRecentEventIdSeen, cfn)
+	if shouldTail {
+		if cancelOnExit {
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, os.Interrupt)
+
+			go func() {
+				<- sigs
+
+				isNewStackCreation := mostRecentEventIdSeen == nil
+
+				if isNewStackCreation {
+					cfn.DeleteStack(&cloudformation.DeleteStackInput{
+						StackName: stackId,
+					})
+				} else {
+					cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+						StackName: stackId,
+					})
+				}
+			}()
+		}
+
+		TailStack(stackId, mostRecentEventIdSeen, cfn)
+	}
+
 }
 
 func Down(region, profile, stackName string) {
@@ -128,7 +143,6 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 		cfn.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
 			StackName: stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
-			//fmt.Fprintf(os.Stderr, "%s\n", *page)
 			for _, event := range page.StackEvents {
 				if *event.EventId == *mostRecentEventIdSeen {
 					return false
@@ -179,7 +193,6 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 		default:
 			// no-op
 		}
-
 	}
 }
 
@@ -205,11 +218,7 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 			NotificationARNs: input.NotificationARNs,
 		})
 
-		if err != nil {
-			return nil, nil, err
-		} else {
-			return resp.StackId, describeResp.StackEvents[0].EventId, nil
-		}
+		return resp.StackId, describeResp.StackEvents[0].EventId, err
 	} else {
 		resp, err := cfn.CreateStack(&cloudformation.CreateStackInput{
 			StackName: input.StackName,
