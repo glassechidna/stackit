@@ -15,7 +15,7 @@ script: ls
 
 after_success:
   - gox -arch="amd64" -os="windows linux darwin"
-  - upx-3.93-amd64_linux/upx stackit_{linux_amd64,windows_amd64.exe}
+  - upx-3.93-amd64_linux/upx stackit_{linux_amd64,windows_amd64.exe} # upx 3.93 creates buggy darwin exes, fixed in unreleased 3.94
   - ls -lh
 
 deploy:
