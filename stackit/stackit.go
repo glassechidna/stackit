@@ -222,7 +222,7 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 			return nil, nil, err
 		}
 
-		resp, err := cfn.UpdateStack(&cloudformation.UpdateStackInput{
+		_, err = cfn.UpdateStack(&cloudformation.UpdateStackInput{
 			StackName: input.StackName,
 			Capabilities: input.Capabilities,
 			RoleARN: input.RoleARN,
@@ -234,7 +234,8 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 			NotificationARNs: input.NotificationARNs,
 		})
 
-		return resp.StackId, describeResp.StackEvents[0].EventId, err
+		event := describeResp.StackEvents[0]
+		return event.StackId, event.EventId, err
 	} else {
 		resp, err := cfn.CreateStack(&cloudformation.CreateStackInput{
 			StackName: input.StackName,
