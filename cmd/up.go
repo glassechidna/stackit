@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"github.com/glassechidna/stackit/stackit"
+	"os"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -42,8 +43,10 @@ var upCmd = &cobra.Command{
 		stackPolicy := viper.GetString("stack-policy")
 		template := viper.GetString("template")
 		previousTemplate := viper.GetBool("previous-template")
-		noDestroy := viper.GetBool("no-destroy")
+		//noDestroy := viper.GetBool("no-destroy")
 		cancelOnExit := !viper.GetBool("no-cancel-on-exit")
+		showTimestamps := !viper.GetBool("no-timestamps")
+		showColor := !viper.GetBool("no-color")
 
 		parsed := parseCLIInput(
 			stackName,
@@ -56,7 +59,26 @@ var upCmd = &cobra.Command{
 			notificationArns,
 			previousTemplate)
 
-		stackit.Up(region, profile, parsed, noDestroy, cancelOnExit)
+		cfn := stackit.CfnClient(profile, region)
+		stackId, mostRecentEventIdSeen, _ := stackit.Up(parsed, cfn)
+		shouldTail := mostRecentEventIdSeen != nil
+
+		// TODO: maybe this could check if Stack.LastUpdatedTime == nil instead
+		isNewStack := mostRecentEventIdSeen != nil && *mostRecentEventIdSeen == ""
+
+		if shouldTail {
+			status := stackit.TailStack(stackId, mostRecentEventIdSeen, showTimestamps, showColor, cfn)
+
+			if status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE" {
+				os.Exit(1)
+			}
+		}
+
+		if cancelOnExit {
+			stackit.CancelOnInterrupt(stackId, isNewStack, cfn)
+		}
+
+		stackit.PrintOutputs(stackId, cfn)
 	},
 }
 
@@ -167,6 +189,8 @@ func init() {
 	upCmd.PersistentFlags().Bool("previous-template", false, "")
 	upCmd.PersistentFlags().Bool("no-destroy", false, "")
 	upCmd.PersistentFlags().Bool("no-cancel-on-exit", false, "")
+	upCmd.PersistentFlags().Bool("no-timestamps", false, "")
+	upCmd.PersistentFlags().Bool("no-color", false, "")
 
 	viper.BindPFlags(upCmd.PersistentFlags())
 }

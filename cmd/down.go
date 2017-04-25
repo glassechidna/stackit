@@ -28,11 +28,21 @@ var downCmd = &cobra.Command{
 		region := viper.GetString("region")
 		profile := viper.GetString("profile")
 		stackName := viper.GetString("stack-name")
+		showTimestamps := !viper.GetBool("no-timestamps")
+		showColor := !viper.GetBool("no-color")
 
-		stackit.Down(region, profile, stackName)
+		cfn := stackit.CfnClient(profile, region)
+		stackId, mostRecentEventIdSeen := stackit.Down(region, profile, stackName)
+		stackit.TailStack(stackId, mostRecentEventIdSeen, showTimestamps, showColor, cfn)
+
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(downCmd)
+
+	downCmd.PersistentFlags().Bool("no-timestamps", false, "")
+	downCmd.PersistentFlags().Bool("no-color", false, "")
+	viper.BindPFlags(downCmd.PersistentFlags())
+
 }

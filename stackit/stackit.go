@@ -12,6 +12,8 @@ import (
 	"os/signal"
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"strings"
+	"github.com/fatih/color"
 )
 
 type StackitUpInput struct {
@@ -46,49 +48,26 @@ func CfnClient(profile, region string) *cloudformation.CloudFormation {
 	return cloudformation.New(sess, config)
 }
 
-func Up(region, profile string, input StackitUpInput, noDestroy, cancelOnExit bool) {
-	cfn := CfnClient(profile, region)
+func CancelOnInterrupt(stackId *string, isNewStackCreation bool, cfn *cloudformation.CloudFormation) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
 
-	stackId, mostRecentEventIdSeen, err := doStackUp(input, cfn)
-	shouldTail := true
+	go func() {
+		<- sigs
 
-	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-				shouldTail = false
-			} else {
-				log.Fatal(err.Error())
-			}
+		if isNewStackCreation {
+			cfn.DeleteStack(&cloudformation.DeleteStackInput{
+				StackName: stackId,
+			})
 		} else {
-			log.Fatal(err.Error())
+			cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
+				StackName: stackId,
+			})
 		}
-	}
+	}()
+}
 
-	if shouldTail {
-		if cancelOnExit {
-			sigs := make(chan os.Signal, 1)
-			signal.Notify(sigs, os.Interrupt)
-
-			go func() {
-				<- sigs
-
-				isNewStackCreation := mostRecentEventIdSeen == nil
-
-				if isNewStackCreation {
-					cfn.DeleteStack(&cloudformation.DeleteStackInput{
-						StackName: stackId,
-					})
-				} else {
-					cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
-						StackName: stackId,
-					})
-				}
-			}()
-		}
-
-		TailStack(stackId, mostRecentEventIdSeen, cfn)
-	}
-
+func PrintOutputs(stackId *string, cfn *cloudformation.CloudFormation) {
 	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{
 		StackName: stackId,
 	})
@@ -107,7 +86,7 @@ func Up(region, profile string, input StackitUpInput, noDestroy, cancelOnExit bo
 	fmt.Println(string(bytes))
 }
 
-func Down(region, profile, stackName string) {
+func Down(region, profile, stackName string) (*string, *string) {
 	cfn := CfnClient(profile, region)
 
 	if stackExists(&stackName, cfn) {
@@ -126,8 +105,11 @@ func Down(region, profile, stackName string) {
 			StackName: &stackName,
 		})
 
-		TailStack(stackId, mostRecentEventIdSeen, cfn)
+		return stackId, mostRecentEventIdSeen
+
 	}
+
+	return nil, nil
 }
 
 func stackExists(stackName *string, cfn *cloudformation.CloudFormation) bool {
@@ -143,7 +125,11 @@ func fixedLengthString(length int, str string) string {
 	return fmt.Sprintf(verb, str)
 }
 
-func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.CloudFormation) {
+func isBadStatus(status string) bool {
+	return strings.HasSuffix(status, "_FAILED")
+}
+
+func TailStack(stackId, mostRecentEventIdSeen *string, showTimestamps, showColor bool, cfn *cloudformation.CloudFormation) string {
 	if mostRecentEventIdSeen == nil {
 		tmp := ""
 		mostRecentEventIdSeen = &tmp
@@ -178,13 +164,22 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
 			event := events[ev_i]
 
-			formattedTime := event.Timestamp.Format("[03:04:05]")
+			timestampPrefix := ""
+			if showTimestamps {
+				timestampPrefix = event.Timestamp.Format("[03:04:05]")
+			}
 
 			reasonPart := ""
 			if event.ResourceStatusReason != nil {
 				reasonPart = fmt.Sprintf("- %s", *event.ResourceStatusReason)
 			}
-			fmt.Fprintf(os.Stderr, "%s %s - %s %s\n", formattedTime, fixedLengthString(resourceNameLength, *event.LogicalResourceId), *event.ResourceStatus, reasonPart)
+
+			line := fmt.Sprintf("%s %s - %s %s", timestampPrefix, fixedLengthString(resourceNameLength, *event.LogicalResourceId), *event.ResourceStatus, reasonPart)
+			if showColor && isBadStatus(*event.ResourceStatus) {
+				color.New(color.FgRed).Fprintln(os.Stderr, line)
+			} else {
+				fmt.Fprintln(os.Stderr, line)
+			}
 		}
 
 		resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: stackId})
@@ -193,11 +188,12 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 			log.Fatal(err.Error())
 		}
 
-		switch *resp.Stacks[0].StackStatus {
+		status := *resp.Stacks[0].StackStatus
+		switch status {
 		case
 			"CREATE_COMPLETE",
-			"CREATE_FAILED",
 			"DELETE_COMPLETE",
+			"CREATE_FAILED",
 			"DELETE_FAILED",
 			"ROLLBACK_COMPLETE",
 			"ROLLBACK_FAILED",
@@ -205,14 +201,14 @@ func TailStack(stackId, mostRecentEventIdSeen *string, cfn *cloudformation.Cloud
 			"UPDATE_FAILED",
 			"UPDATE_ROLLBACK_COMPLETE",
 			"UPDATE_ROLLBACK_FAILED":
-			return
+			return status
 		default:
 			// no-op
 		}
 	}
 }
 
-func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*string, *string, error) {
+func Up(input StackitUpInput, cfn *cloudformation.CloudFormation) (*string, *string, error) {
 	if stackExists(input.StackName, cfn) {
 		describeResp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 			StackName: input.StackName,
@@ -221,7 +217,6 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 		if err != nil {
 			return nil, nil, err
 		}
-
 		_, err = cfn.UpdateStack(&cloudformation.UpdateStackInput{
 			StackName: input.StackName,
 			Capabilities: input.Capabilities,
@@ -235,7 +230,19 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 		})
 
 		event := describeResp.StackEvents[0]
-		return event.StackId, event.EventId, err
+		eventIdToTail := event.EventId
+
+		if err != nil {
+			if awsErr, ok := err.(awserr.Error); ok {
+				if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
+					eventIdToTail = nil
+					err = nil
+				}
+			}
+		}
+
+
+		return event.StackId, eventIdToTail, err
 	} else {
 		resp, err := cfn.CreateStack(&cloudformation.CreateStackInput{
 			StackName: input.StackName,
@@ -251,7 +258,8 @@ func doStackUp(input StackitUpInput, cfn *cloudformation.CloudFormation) (*strin
 		if err != nil {
 			return nil, nil, err
 		} else {
-			return resp.StackId, nil, nil
+			blank := ""
+			return resp.StackId, &blank, nil
 		}
 	}
 }

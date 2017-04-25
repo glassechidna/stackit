@@ -27,9 +27,11 @@ var tailCmd = &cobra.Command{
 		region := viper.GetString("region")
 		profile := viper.GetString("profile")
 		stackName := viper.GetString("stack-name")
+		showTimestamps := !viper.GetBool("no-timestamps")
+		showColor := !viper.GetBool("no-color")
 
 		cfn := stackit.CfnClient(profile, region)
-		stackit.TailStack(&stackName, nil, cfn)
+		stackit.TailStack(&stackName, nil, showTimestamps, showColor, cfn)
 	},
 }
 
