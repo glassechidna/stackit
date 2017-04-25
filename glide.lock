@@ -1,5 +1,5 @@
-hash: 481da05110096809fe67986939dbb0f2e9a5b706639f1ae74381ec9fbdda0ea5
-updated: 2017-04-24T08:33:40.489547857+10:00
+hash: c150ff32e8ef796edf0bab728101ba1f2b96778b34a4afeb60b1973dd58c90e1
+updated: 2017-04-25T19:22:10.098868081+10:00
 imports:
 - name: github.com/aws/aws-sdk-go
   version: f6ea558f30e0a983d529b32c741e4caed17c7df0
@@ -27,6 +27,8 @@ imports:
   - private/protocol/xml/xmlutil
   - service/cloudformation
   - service/sts
+- name: github.com/fatih/color
+  version: 9131ab34cf20d2f6d83fdc67168a5430d1c7dc23
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-ini/ini
@@ -61,7 +63,7 @@ imports:
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: 63121c8814fc0b99184dbc1c8b7ef4fddae437c3
+  version: f4f10f6873175e78bb1503da7e78c260a7f3ef63
 - name: github.com/spf13/jwalterweatherman
   version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
 - name: github.com/spf13/pflag
@@ -69,7 +71,7 @@ imports:
 - name: github.com/spf13/viper
   version: 0967fc9aceab2ce9da34061253ac10fb99bba5b2
 - name: golang.org/x/sys
-  version: ea9bcade75cb975a0b9738936568ab388b845617
+  version: 8c0a5eacbac818f9011015b17992f53d9cec3e8f
   subpackages:
   - unix
 - name: golang.org/x/text

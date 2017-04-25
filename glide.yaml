@@ -9,3 +9,5 @@ import:
   - service/cloudformation
 - package: github.com/spf13/cobra
 - package: github.com/spf13/viper
+- package: github.com/fatih/color
+  version: ^1.4.1
