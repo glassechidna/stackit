@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DockerImage:
+    Type: String
+  Cluster:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Default: vpc-8d2005e8
+Resources:
+  TaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Volumes: []
+      Family: ecs-run-task-test
+      ContainerDefinitions:
+        - Name: ecs-run-task-test
+          Image: !Ref DockerImage
+          MemoryReservation: 256
+          PortMappings:
+            - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+                awslogs-group: !Ref LogGroup
+                awslogs-region: !Ref AWS::Region
+                awslogs-stream-prefix: MyCoolPrefix
+#  Service:
+#    Type: AWS::ECS::Service
+#    Properties:
+#      TaskDefinition: !Ref TaskDef
+#      DesiredCount: 1
+#      Cluster: Cluster
+#      Role: !ImportValue EcsServiceRole
+#      LoadBalancers:
+#        - ContainerName: web
+#          ContainerPort: 80
+#          TargetGroupArn: !Ref TargetGroup
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 60
+      UnhealthyThresholdCount: 10
+      HealthCheckPath: /ping
+      Port: 1234 # unused
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+Outputs:
+  LogGroup:
+    Value: !Ref LogGroup
+  TaskDef:
+    Value: !Ref TaskDef
