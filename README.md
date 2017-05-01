@@ -2,8 +2,6 @@
 
 [![Build Status](https://travis-ci.org/glassechidna/stackit.svg?branch=master)](https://travis-ci.org/glassechidna/stackit)
 
-## This README is full of lies. Right now it serves as more of a TODO for the developers.
-
 `stackit` is a CLI tool to synchronously and idempotently operate on AWS
 CloudFormation stacks - a perfect complement for continuous integration systems
 and developers who prefer the comfort of the command line.
@@ -25,36 +23,103 @@ an `up` facade.
 
 ## Usage
 
-* `stackit <stack-name> up`
-* `stackit <stack-name> down`
-* `stackit <stack-name> outputs`
-* `stackit <stack-name> tail`
+### `up`
+
+```
+$ cd sample
+$ cat .stackit.yml
+stack-name: stackit-test
+template: sample.yml
+param-value:
+  - DockerImage=redis
+  - Cluster=app-cluster-Cluster-1C2I18JXK9QNM
+$ stackit up
+Using config file: /Users/aidan/stackit/sample/.stackit.yml
+[10:06:29]         stackit-test - CREATE_IN_PROGRESS - User Initiated
+[10:06:34]             LogGroup - CREATE_IN_PROGRESS
+[10:06:34]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
+[10:06:34]          TargetGroup - CREATE_IN_PROGRESS
+[10:06:34]             LogGroup - CREATE_COMPLETE
+[10:06:35]          TargetGroup - CREATE_IN_PROGRESS - Resource creation Initiated
+[10:06:35]          TargetGroup - CREATE_COMPLETE
+[10:06:37]              TaskDef - CREATE_IN_PROGRESS
+[10:06:37]              TaskDef - CREATE_IN_PROGRESS - Resource creation Initiated
+[10:06:38]              TaskDef - CREATE_COMPLETE
+[10:06:40]         stackit-test - CREATE_COMPLETE
+{
+  "LogGroup": "stackit-test-LogGroup-JEIBPNV8J33R",
+  "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:26"
+}
+```
+
+In the above example `stackit` looks for a `.stackit.yml` in the current directory
+as insufficient arguments were passed on the command line. Alternatively, arguments
+can be passed in directly:
+
+```
+stackit up --stack-name some-other-name # use this stack name, fallback to yml for rest
+stackit up \
+  --stack-name some-other-name \
+  --template sample.yml \
+  --param-value DockerImage=redis \
+  --param-value Cluster=some-ecs-cluster # no yml necessary
+```
+
+Note that there is JSON printed at the end of the `up` command. This is all the
+_Outputs_ defined in your CloudFormation template file. These are printed to
+stdout. The event lines above them are printed to stderr.
+
+This separation makes it easy to pipe output from `stackit up` to another
+command without having to skip the log lines. Likewise, a non-zero exit code
+indicates stack update/creation failure.
+
+### `outputs`
+
+`stackit outputs --stack-name <name>` prints the stack's Outputs in JSON form,
+without making any modifications to the stack.
+
+### `tail`
+
+If an existing stack creation or update is in progress, `stackit tail --stack-name <name>`
+will poll for events, similar to the `up` command.
+
+### `down`
+
+`stackit down --stack-name <name>` will delete the named stack if it exists,
+otherwise it will do nothing. Non-zero exit code indicates failure to delete
+an existing stack.
+
+### More
+
+All commands can be passed a `--profile <name>` parameter. This will use alternative
+AWS credentials defined in a profile named in `~/.aws/config` if it exists. If your
+profile requires MFA credentials in order to assume a role, `stackit` will prompt
+for those to be entered on `stdin`.
+
+All commands can be passed a `--region <region>` parameter if you want to deploy
+your stack in a different region.
+
+## TODO
+
 * `stackit <stack-name> cancel`
 * `stackit <stack-name> change create`
 * `stackit <stack-name> change execute`
-* ~~`stackit <stack-name> resources`~~
-* ~~`stackit <stack-name> signal <logical-name>`~~
+* `stackit <stack-name> signal <logical-name>`
 
-### Flags
+## Additional Flags
 
-global:
-
-* `--profile VAL`
-* `--region VAL`
-* `--stack-name VAL`
+TODO: Document these properly
 
 * `--service-role VAL`
-* `--param-value NAME=VAL` (multiple)
 * `--previous-param-value NAME`
 * `--tag NAME=VAL` (multiple)
 * `--notification-arn` (multiple)
 * `--stack-policy VAL`
-* `--template VAL`
 * `--previous-template`
-* `--no-destroy`
 * `--no-cancel-on-exit`
+* `--no-destroy` (not yet implemented)
 
-for changes:
+for changes: (not yet implemented)
 * `--name VAL`
 * `--execute-if-no-destroy`
 
@@ -62,9 +127,4 @@ for changes:
 
 * Change-sets return special exit code to indicate destructive (replacement,
   deletion) actions
-* Human output to stderr, machine output to stdout
-* Pipeable JSON everywhere
 * MFA support
-
-## Installation
-
