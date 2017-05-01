@@ -89,7 +89,10 @@ func PrintOutputs(stackId *string, cfn *cloudformation.CloudFormation) {
 func Down(region, profile, stackName string) (*string, *string) {
 	cfn := CfnClient(profile, region)
 
-	if stackExists(&stackName, cfn) {
+	_, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackName})
+	stackExists := err == nil
+
+	if stackExists {
 		resp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 			StackName: &stackName,
 		})
@@ -110,14 +113,6 @@ func Down(region, profile, stackName string) (*string, *string) {
 	}
 
 	return nil, nil
-}
-
-func stackExists(stackName *string, cfn *cloudformation.CloudFormation) bool {
-	_, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{
-		StackName: stackName,
-	})
-
-	return err == nil
 }
 
 func fixedLengthString(length int, str string) string {
@@ -209,7 +204,18 @@ func TailStack(stackId, mostRecentEventIdSeen *string, showTimestamps, showColor
 }
 
 func Up(input StackitUpInput, cfn *cloudformation.CloudFormation) (*string, *string, error) {
-	if stackExists(input.StackName, cfn) {
+	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: input.StackName})
+	stackExists := err == nil
+
+	if resp != nil && len(resp.Stacks) > 0 {
+		stack := resp.Stacks[0]
+		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
+			cfn.DeleteStack(&cloudformation.DeleteStackInput{StackName: input.StackName})
+			stackExists = false
+		}
+	}
+
+	if stackExists {
 		describeResp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
 			StackName: input.StackName,
 		})
