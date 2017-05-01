@@ -6,6 +6,12 @@
 CloudFormation stacks - a perfect complement for continuous integration systems
 and developers who prefer the comfort of the command line.
 
+## Where
+
+The latest compiled `stackit` binaries for Linux, macOS and Windows can be
+downloaded from the project's [**GitHub Releases**](https://github.com/glassechidna/stackit/releases)
+page.
+
 ## Why
 
 CloudFormation is inherently asychronous and this is reflected in the usage
@@ -21,7 +27,7 @@ stack before putting it under CI, or script up a "does it exist yet?" check
 before deciding which command to invoke. `stackit` abstracts over these with
 an `up` facade.
 
-## Usage
+## How
 
 ### `up`
 
