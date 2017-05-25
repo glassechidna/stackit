@@ -72,7 +72,6 @@ func initConfig() {
 	viper.AutomaticEnv()          // read in environment variables that match
 
 	if cfgFile != "" { // enable ability to specify config file via flag
-		fmt.Printf("file is %s\n", cfgFile)
 		viper.SetConfigFile(cfgFile)
 	}
 
