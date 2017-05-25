@@ -130,6 +130,14 @@ func parseCLIInput(
 
 	params := []*cloudformation.Parameter{}
 
+	configFileParameters := viper.GetStringMapString("parameters")
+	for name, value := range configFileParameters {
+		params = append(params, &cloudformation.Parameter{
+			ParameterKey: aws.String(name),
+			ParameterValue: aws.String(value),
+		})
+	}
+
 	for _, paramPair := range paramValues {
 		parts := strings.SplitN(paramPair, "=", 2)
 		name, value := parts[0], parts[1]
