@@ -23,6 +23,7 @@ import (
 	"strings"
 	"github.com/glassechidna/stackit/stackit"
 	"os"
+	"log"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -61,8 +62,12 @@ var upCmd = &cobra.Command{
 			previousTemplate)
 
 		cfn := stackit.CfnClient(profile, region)
-		stackId, mostRecentEventIdSeen, _ := stackit.Up(parsed, cfn)
+		stackId, mostRecentEventIdSeen, err := stackit.Up(parsed, cfn)
 		shouldTail := mostRecentEventIdSeen != nil
+
+		if err != nil {
+			log.Panicf(err.Error())
+		}
 
 		// TODO: maybe this could check if Stack.LastUpdatedTime == nil instead
 		isNewStack := mostRecentEventIdSeen != nil && *mostRecentEventIdSeen == ""
