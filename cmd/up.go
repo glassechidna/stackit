@@ -27,6 +27,11 @@ import (
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
 
+var paramValues []string
+var previousParamValues []string
+var tags []string
+var notificationArns []string
+
 var upCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Bring stack up to date",
@@ -36,10 +41,6 @@ var upCmd = &cobra.Command{
 		stackName := viper.GetString("stack-name")
 
 		serviceRole := viper.GetString("service-role")
-		paramValues := viper.GetStringSlice("param-value")
-		previousParamValues := viper.GetStringSlice("previous-param-value")
-		tags := viper.GetStringSlice("tag")
-		notificationArns := viper.GetStringSlice("notification-arn")
 		stackPolicy := viper.GetString("stack-policy")
 		template := viper.GetString("template")
 		previousTemplate := viper.GetBool("previous-template")
@@ -182,10 +183,10 @@ func init() {
 	upCmd.PersistentFlags().String("service-role", "", "")
 	upCmd.PersistentFlags().String("stack-policy", "", "")
 	upCmd.PersistentFlags().String("template", "", "")
-	upCmd.PersistentFlags().StringSlice("param-value", []string{}, "")
-	upCmd.PersistentFlags().StringSlice("previous-param-value", []string{}, "")
-	upCmd.PersistentFlags().StringSlice("tag", []string{}, "")
-	upCmd.PersistentFlags().StringSlice("notification-arn", []string{}, "")
+	upCmd.PersistentFlags().StringArrayVar(&paramValues, "param-value", []string{}, "")
+	upCmd.PersistentFlags().StringArrayVar(&previousParamValues, "previous-param-value", []string{}, "")
+	upCmd.PersistentFlags().StringArrayVar(&tags, "tag", []string{}, "")
+	upCmd.PersistentFlags().StringArrayVar(&notificationArns, "notification-arn", []string{}, "")
 	upCmd.PersistentFlags().Bool("previous-template", false, "")
 	upCmd.PersistentFlags().Bool("no-destroy", false, "")
 	upCmd.PersistentFlags().Bool("no-cancel-on-exit", false, "")
