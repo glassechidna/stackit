@@ -93,7 +93,7 @@ func parseCLIInput(
 	serviceRole,
 	stackPolicy,
 	template string,
-	paramValues,
+	cliParamValues,
 	previousParamValues,
 	tags,
 	notificationArns []string,
@@ -128,20 +128,23 @@ func parseCLIInput(
 		input.PreviousTemplate = aws.Bool(previousTemplate)
 	}
 
-	params := []*cloudformation.Parameter{}
+	paramMap := make(map[string]string)
 
-	configFileParameters := viper.GetStringMapString("parameters")
-	for name, value := range configFileParameters {
-		params = append(params, &cloudformation.Parameter{
-			ParameterKey: aws.String(name),
-			ParameterValue: aws.String(value),
-		})
+	populateParamMap := func(slice []string) {
+		for _, paramPair := range slice {
+			parts := strings.SplitN(paramPair, "=", 2)
+			name, value := parts[0], parts[1]
+			paramMap[name] = value
+		}
 	}
 
-	for _, paramPair := range paramValues {
-		parts := strings.SplitN(paramPair, "=", 2)
-		name, value := parts[0], parts[1]
 
+	configFileParameters := viper.GetStringSlice("parameters")
+	populateParamMap(configFileParameters)
+	populateParamMap(cliParamValues)
+
+	params := []*cloudformation.Parameter{}
+	for name, value := range paramMap {
 		params = append(params, &cloudformation.Parameter{
 			ParameterKey: aws.String(name),
 			ParameterValue: aws.String(value),

@@ -1,5 +1,5 @@
 stack-name: stackit-test
 template: sample.yml
 parameters:
-  DockerImage: redis
-  Cluster: app-cluster-Cluster-1C2I18JXK9QNM
+  - DockerImage=redis
+  - Cluster=app-cluster-Cluster-1C2I18JXK9QNM
