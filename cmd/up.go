@@ -23,7 +23,8 @@ import (
 	"strings"
 	"github.com/glassechidna/stackit/stackit"
 	"os"
-	"log"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/fatih/color"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -66,7 +67,14 @@ var upCmd = &cobra.Command{
 		shouldTail := mostRecentEventIdSeen != nil
 
 		if err != nil {
-			log.Panicf(err.Error())
+			if awsErr, ok := err.(awserr.Error); ok {
+				if awsErr.Code() == "ValidationError" {
+					color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
+					os.Exit(1)
+				}
+			} else {
+				color.New(color.FgRed).Fprintln(os.Stderr, err.Error())
+			}
 		}
 
 		// TODO: maybe this could check if Stack.LastUpdatedTime == nil instead
