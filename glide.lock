@@ -1,8 +1,8 @@
 hash: c150ff32e8ef796edf0bab728101ba1f2b96778b34a4afeb60b1973dd58c90e1
-updated: 2017-05-26T09:19:54.584860691+10:00
+updated: 2017-09-01T13:26:28.922587657+10:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: e0cdae7a65ba3a5e66a0af747a7b3967ddac099c
+  version: b79a722cb7aba0edd9bd2256361ae2e15e98f8ad
   subpackages:
   - aws
   - aws/awserr
@@ -20,6 +20,7 @@ imports:
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/shareddefaults
   - private/protocol
   - private/protocol/query
   - private/protocol/query/queryutil
@@ -32,7 +33,7 @@ imports:
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-ini/ini
-  version: e7fea39b01aea8d5671f6858f0532f56e8bff3a5
+  version: c787282c39ac1fc618827141a1f762240def08a3
 - name: github.com/hashicorp/hcl
   version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
   subpackages:
