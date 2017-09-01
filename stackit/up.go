@@ -82,6 +82,7 @@ func updateStack(sess *session.Session, input StackitUpInput) (*StackUpOutput, e
 				}, nil
 			}
 		}
+		return nil, err
 	}
 
 	channel := DoTailStack(sess, &stackId, eventIdToTail)
