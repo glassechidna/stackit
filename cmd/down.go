@@ -31,10 +31,21 @@ var downCmd = &cobra.Command{
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
 
-		cfn := stackit.CfnClient(profile, region)
-		stackId, mostRecentEventIdSeen := stackit.Down(region, profile, stackName)
-		stackit.TailStack(stackId, mostRecentEventIdSeen, showTimestamps, showColor, cfn)
+		sess := stackit.AwsSession(profile, region)
 
+		stackId, mostRecentEventIdSeen := stackit.Down(sess, stackName)
+		if stackId == nil { return }
+
+		channel := stackit.DoTailStack(sess, stackId, mostRecentEventIdSeen)
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
+
+		for {
+			tailEvent := <- channel
+			printer.PrintTailEvent(tailEvent)
+			if tailEvent.Done {
+				break
+			}
+		}
 	},
 }
 

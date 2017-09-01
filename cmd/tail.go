@@ -30,8 +30,18 @@ var tailCmd = &cobra.Command{
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
 
-		cfn := stackit.CfnClient(profile, region)
-		stackit.TailStack(&stackName, nil, showTimestamps, showColor, cfn)
+		sess := stackit.AwsSession(profile, region)
+
+		channel := stackit.DoTailStack(sess, &stackName, nil)
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
+
+		for {
+			tailEvent := <- channel
+			printer.PrintTailEvent(tailEvent)
+			if tailEvent.Done {
+				break
+			}
+		}
 	},
 }
 

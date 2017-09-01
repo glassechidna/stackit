@@ -25,6 +25,7 @@ import (
 	"os"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/fatih/color"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -47,9 +48,11 @@ var upCmd = &cobra.Command{
 		template := viper.GetString("template")
 		previousTemplate := viper.GetBool("previous-template")
 		//noDestroy := viper.GetBool("no-destroy")
-		cancelOnExit := !viper.GetBool("no-cancel-on-exit")
+		//cancelOnExit := !viper.GetBool("no-cancel-on-exit")
+
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
 
 		parsed := parseCLIInput(
 			stackName,
@@ -62,38 +65,46 @@ var upCmd = &cobra.Command{
 			notificationArns,
 			previousTemplate)
 
-		cfn := stackit.CfnClient(profile, region)
-		stackId, mostRecentEventIdSeen, err := stackit.Up(parsed, cfn)
-		shouldTail := mostRecentEventIdSeen != nil
+		sess := stackit.AwsSession(profile, region)
+		output, err := stackit.Up(sess, parsed)
 
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
-				if awsErr.Code() == "ValidationError" {
-					color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
-					os.Exit(1)
-				}
+				color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
 			} else {
 				color.New(color.FgRed).Fprintln(os.Stderr, err.Error())
 			}
+			os.Exit(1)
 		}
 
-		// TODO: maybe this could check if Stack.LastUpdatedTime == nil instead
-		isNewStack := mostRecentEventIdSeen != nil && *mostRecentEventIdSeen == ""
-
-		if shouldTail {
-			status := stackit.TailStack(stackId, mostRecentEventIdSeen, showTimestamps, showColor, cfn)
-
-			if status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE" {
-				os.Exit(1)
+		if !output.NoOp {
+			for {
+				tailEvent := <- *output.Channel
+				printer.PrintTailEvent(tailEvent)
+				if tailEvent.Done {
+					break
+				}
 			}
 		}
 
-		if cancelOnExit {
-			stackit.CancelOnInterrupt(stackId, isNewStack, cfn)
-		}
+		//
+		//if cancelOnExit {
+		//	stackit.CancelOnInterrupt(sess, stackId, isNewStack)
+		//}
 
-		stackit.PrintOutputs(stackId, cfn)
+		exitIfFailedUpdate(sess, output.StackId)
+		stackit.PrintOutputs(sess, &output.StackId)
 	},
+}
+
+func exitIfFailedUpdate(sess *session.Session, stackId string) {
+	cfn := cloudformation.New(sess)
+	resp, _ := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
+	status := *resp.Stacks[0].StackStatus
+
+	if status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE" {
+		os.Exit(1)
+	}
 }
 
 func parseCLIInput(
