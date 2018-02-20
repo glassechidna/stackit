@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws"
+	"time"
 )
 
 type StackitUpInput struct {
@@ -36,6 +37,7 @@ func Up(sess *session.Session, input StackitUpInput) (*StackUpOutput, error) {
 		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
 			cfn.DeleteStack(&cloudformation.DeleteStackInput{StackName: input.StackName})
 			stackExists = false
+			time.Sleep(time.Duration(3) * time.Second) // wait for cloudformation to register stack deletion
 		}
 	}
 
