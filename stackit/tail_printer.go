@@ -40,7 +40,7 @@ func NewTailPrinterWithOptions(showTimestamp, showColors bool) TailPrinter {
 	}
 }
 
-func (tp *TailPrinter) PrintTailEvent(tailEvent TailStackEvent) {
+func (tp *TailPrinter) FormatTailEvent(tailEvent TailStackEvent) string {
 	resourceNameLength := 20 // TODO: determine this from template/API
 
 	event := tailEvent.Event
@@ -55,8 +55,14 @@ func (tp *TailPrinter) PrintTailEvent(tailEvent TailStackEvent) {
 	line := fmt.Sprintf("%s %s - %s %s", timestampPrefix, fixedLengthString(resourceNameLength, *event.LogicalResourceId), *event.ResourceStatus, reasonPart)
 
 	if isBadStatus(*event.ResourceStatus) && tp.failureColor != nil {
-		tp.failureColor.Fprintln(tp.writer, line)
+		return tp.failureColor.Sprint(line)
 	} else {
-		fmt.Fprintln(tp.writer, line)
+		return line
 	}
+}
+
+func (tp *TailPrinter) PrintTailEvent(tailEvent TailStackEvent) {
+	line := tp.FormatTailEvent(tailEvent)
+	tp.writer.Write([]byte(line))
+	tp.writer.Write([]byte("\n"))
 }
