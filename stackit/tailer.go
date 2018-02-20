@@ -59,7 +59,7 @@ func DoTailStack(sess *session.Session, stackId, startEventId *string) chan Tail
 
 			for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
 				event := events[ev_i]
-				done := isTerminalStatus(status) && ev_i == 0
+				done := IsTerminalStatus(status) && ev_i == 0
 
 				tailEvent := TailStackEvent{
 					Event: event,
@@ -83,7 +83,7 @@ func isBadStatus(status string) bool {
 	return strings.HasSuffix(status, "_FAILED")
 }
 
-func isTerminalStatus(status string) bool {
+func IsTerminalStatus(status string) bool {
 	switch status {
 	case
 		"CREATE_COMPLETE",
