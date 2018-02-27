@@ -14,7 +14,7 @@ install:
 script: ls
 
 after_success:
-  - gox -arch="amd64" -os="windows linux darwin"
+  - CGO_ENABLED=0 gox -arch="amd64" -os="windows linux darwin"
   - upx-3.94-amd64_linux/upx stackit_*
   - ls -lh
 
