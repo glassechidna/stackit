@@ -119,6 +119,7 @@ func parseCLIInput(
 	previousTemplate bool) stackit.StackitUpInput {
 	input := stackit.StackitUpInput{
 		StackName: aws.String(stackName),
+		PopulateMissing: true,
 	}
 
 	if len(serviceRole) > 0 {
@@ -157,7 +158,6 @@ func parseCLIInput(
 		}
 	}
 
-
 	configFileParameters := viper.GetStringSlice("parameters")
 	populateParamMap(configFileParameters)
 	populateParamMap(cliParamValues)
@@ -195,7 +195,6 @@ func parseCLIInput(
 		input.Tags = cfnTags
 	}
 
-
 	if len(notificationArns) > 0 {
 		cfnNotificationArns := []*string{}
 
@@ -205,7 +204,6 @@ func parseCLIInput(
 
 		input.NotificationARNs = cfnNotificationArns
 	}
-
 
 	input.Capabilities = aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"})
 
