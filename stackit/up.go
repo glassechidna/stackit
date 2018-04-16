@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws"
 	"time"
+	"github.com/pkg/errors"
 )
 
 type StackitUpInput struct {
@@ -27,28 +28,38 @@ type StackUpOutput struct {
 	NoOp    bool
 }
 
-func populateMissing(input *StackitUpInput, stack *cloudformation.Stack) {
-	paramExists := func(name string) bool {
+func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudformation.Stack) error {
+	maybeAddParam := func(name string) {
 		for _, param := range input.Parameters {
 			if *param.ParameterKey == name {
-				return true
+				return
 			}
 		}
-		return false
-	}
-
-	for _, param := range stack.Parameters {
-		if !paramExists(*param.ParameterKey) {
-			input.Parameters = append(input.Parameters, &cloudformation.Parameter{
-				ParameterKey:     param.ParameterKey,
-				UsePreviousValue: aws.Bool(true),
-			})
-		}
+		input.Parameters = append(input.Parameters, &cloudformation.Parameter{
+			ParameterKey:     &name,
+			UsePreviousValue: aws.Bool(true),
+		})
 	}
 
 	if input.TemplateBody == nil || len(*input.TemplateBody) == 0 {
 		input.PreviousTemplate = aws.Bool(true)
+
+		for _, param := range stack.Parameters {
+			maybeAddParam(*param.ParameterKey)
+		}
+	} else {
+		api := cloudformation.New(sess)
+		resp, err := api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: input.TemplateBody})
+		if err != nil {
+			return err
+		}
+
+		for _, param := range resp.Parameters {
+			maybeAddParam(*param.ParameterKey)
+		}
 	}
+
+	return nil
 }
 
 func CleanStackExists(sess *session.Session, name string) (bool, *cloudformation.Stack) {
@@ -77,7 +88,12 @@ func Up(sess *session.Session, input StackitUpInput) (*StackUpOutput, error) {
 	stackExists, stack := CleanStackExists(sess, *input.StackName)
 
 	if stackExists {
-		if input.PopulateMissing { populateMissing(&input, stack) }
+		if input.PopulateMissing {
+			err := populateMissing(sess, &input, stack)
+			if err != nil {
+				return nil, errors.Wrap(err, "populating missing parameters")
+			}
+		}
 		return updateStack(sess, input)
 	} else {
 		return createStack(sess, input)
