@@ -1,8 +1,8 @@
 hash: c150ff32e8ef796edf0bab728101ba1f2b96778b34a4afeb60b1973dd58c90e1
-updated: 2017-09-01T13:26:28.922587657+10:00
+updated: 2018-05-09T10:44:50.623504+10:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: b79a722cb7aba0edd9bd2256361ae2e15e98f8ad
+  version: 31bd69f7db00cbf3d85d129e16d42304cb6e455f
   subpackages:
   - aws
   - aws/awserr
@@ -20,6 +20,8 @@ imports:
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/sdkio
+  - internal/sdkrand
   - internal/shareddefaults
   - private/protocol
   - private/protocol/query
@@ -29,7 +31,7 @@ imports:
   - service/cloudformation
   - service/sts
 - name: github.com/fatih/color
-  version: 570b54cabe6b8eb0bc2dfce68d964677d63b5260
+  version: 507f6050b8568533fb3f5504de8e5205fa62a114
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/go-ini/ini
@@ -53,16 +55,16 @@ imports:
   version: 51463bfca2576e06c62a8504b5c0f06d61312647
 - name: github.com/mattn/go-colorable
   version: 5411d3eea5978e6cdc258b30de592b60df6aba96
-  repo: https://github.com/mattn/go-colorable
 - name: github.com/mattn/go-isatty
   version: 57fdcb988a5c543893cc61bce354a6e24ab70022
-  repo: https://github.com/mattn/go-isatty
 - name: github.com/mitchellh/mapstructure
   version: cc8532a8e9a55ea36402aa21efdf403a60d34096
 - name: github.com/pelletier/go-buffruneio
   version: c37440a7cf42ac63b919c752ca73a85067e05992
 - name: github.com/pelletier/go-toml
   version: 23f644976aa7c724adf4aec911dadf4af17840ab
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/spf13/afero
   version: 9be650865eab0c12963d8753212f4f9c66cdcf12
   subpackages:
@@ -78,8 +80,7 @@ imports:
 - name: github.com/spf13/viper
   version: 0967fc9aceab2ce9da34061253ac10fb99bba5b2
 - name: golang.org/x/sys
-  version: e24f485414aeafb646f6fca458b0bf869c0880a1
-  repo: https://go.googlesource.com/sys
+  version: 314a259e304ff91bd6985da2a7149bbf91237993
   subpackages:
   - unix
 - name: golang.org/x/text
