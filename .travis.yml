@@ -11,10 +11,9 @@ install:
   - curl -sL -o upx.txz https://github.com/upx/upx/releases/download/v3.94/upx-3.94-amd64_linux.tar.xz
   - tar -xvf upx.txz
 
-script: ls
+script: CGO_ENABLED=0 gox -arch="amd64" -os="windows linux darwin"
 
 after_success:
-  - CGO_ENABLED=0 gox -arch="amd64" -os="windows linux darwin"
   - upx-3.94-amd64_linux/upx stackit_*
   - ls -lh
 
