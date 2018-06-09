@@ -118,12 +118,12 @@ func parseCLIInput(
 	notificationArns []string,
 	previousTemplate bool) stackit.StackitUpInput {
 	input := stackit.StackitUpInput{
-		StackName: aws.String(stackName),
+		StackName: stackName,
 		PopulateMissing: true,
 	}
 
 	if len(serviceRole) > 0 {
-		input.RoleARN = aws.String(serviceRole)
+		input.RoleARN = serviceRole
 	}
 
 	if len(stackPolicy) > 0 {
@@ -131,7 +131,7 @@ func parseCLIInput(
 		if err != nil {
 
 		} else {
-			input.StackPolicyBody = aws.String(string(policyBody))
+			input.StackPolicyBody = string(policyBody)
 		}
 	}
 
@@ -140,13 +140,11 @@ func parseCLIInput(
 		if err != nil {
 
 		} else {
-			input.TemplateBody = aws.String(string(templateBody))
+			input.TemplateBody = string(templateBody)
 		}
 	}
 
-	if previousTemplate {
-		input.PreviousTemplate = aws.Bool(previousTemplate)
-	}
+	input.PreviousTemplate = previousTemplate
 
 	paramMap := make(map[string]string)
 

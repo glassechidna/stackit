@@ -10,11 +10,11 @@ import (
 )
 
 type StackitUpInput struct {
-	StackName        *string
-	RoleARN          *string
-	StackPolicyBody  *string
-	TemplateBody     *string
-	PreviousTemplate *bool
+	StackName        string
+	RoleARN          string
+	StackPolicyBody  string
+	TemplateBody     string
+	PreviousTemplate bool
 	Parameters       []*cloudformation.Parameter
 	Tags             []*cloudformation.Tag
 	NotificationARNs []*string
@@ -41,15 +41,15 @@ func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudf
 		})
 	}
 
-	if input.TemplateBody == nil || len(*input.TemplateBody) == 0 {
-		input.PreviousTemplate = aws.Bool(true)
+	if len(input.TemplateBody) == 0 {
+		input.PreviousTemplate = true
 
 		for _, param := range stack.Parameters {
 			maybeAddParam(*param.ParameterKey)
 		}
 	} else {
 		api := cloudformation.New(sess)
-		resp, err := api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: input.TemplateBody})
+		resp, err := api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: &input.TemplateBody})
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,7 @@ func CleanStackExists(sess *session.Session, name string) (bool, *cloudformation
 }
 
 func Up(sess *session.Session, input StackitUpInput) (*StackUpOutput, error) {
-	stackExists, stack := CleanStackExists(sess, *input.StackName)
+	stackExists, stack := CleanStackExists(sess, input.StackName)
 
 	if stackExists {
 		if input.PopulateMissing {
@@ -104,19 +104,19 @@ func updateStack(sess *session.Session, input StackitUpInput) (*StackUpOutput, e
 	cfn := cloudformation.New(sess)
 
 	describeResp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
-		StackName: input.StackName,
+		StackName: &input.StackName,
 	})
 
 	if err != nil {
 		return nil, err
 	}
 	_, err = cfn.UpdateStack(&cloudformation.UpdateStackInput{
-		StackName:                   input.StackName,
+		StackName:                   &input.StackName,
 		Capabilities:                input.Capabilities,
-		RoleARN:                     input.RoleARN,
-		StackPolicyDuringUpdateBody: input.StackPolicyBody,
-		TemplateBody:                input.TemplateBody,
-		UsePreviousTemplate:         input.PreviousTemplate,
+		RoleARN:                     &input.RoleARN,
+		StackPolicyDuringUpdateBody: &input.StackPolicyBody,
+		TemplateBody:                &input.TemplateBody,
+		UsePreviousTemplate:         &input.PreviousTemplate,
 		Parameters:                  input.Parameters,
 		Tags:                        input.Tags,
 		NotificationARNs:            input.NotificationARNs,
@@ -152,11 +152,11 @@ func createStack(sess *session.Session, input StackitUpInput) (*StackUpOutput, e
 	cfn := cloudformation.New(sess)
 
 	resp, err := cfn.CreateStack(&cloudformation.CreateStackInput{
-		StackName:    input.StackName,
+		StackName:    &input.StackName,
 		Capabilities: input.Capabilities,
-		RoleARN:      input.RoleARN,
+		RoleARN:      &input.RoleARN,
 		//StackPolicyBody: input.StackPolicyBody,
-		TemplateBody:     input.TemplateBody,
+		TemplateBody:     &input.TemplateBody,
 		Parameters:       input.Parameters,
 		Tags:             input.Tags,
 		NotificationARNs: input.NotificationARNs,
