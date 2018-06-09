@@ -4,13 +4,26 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"time"
-	"log"
 	"fmt"
 	"strings"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 )
 
 type TailStackEvent struct {
 	cloudformation.StackEvent
+}
+
+func describe(cfn *cloudformation.CloudFormation, stackId string) *cloudformation.DescribeStacksOutput {
+	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			if awsErr.Code() == "ThrottlingException" {
+				return describe(cfn, stackId)
+			}
+		}
+		panic(err)
+	}
+	return resp
 }
 
 func PollStackEvents(sess *session.Session, stackId string, startEventId *string, channel chan<- TailStackEvent) error {
@@ -19,7 +32,7 @@ func PollStackEvents(sess *session.Session, stackId string, startEventId *string
 	go func() {
 
 		for {
-			time.Sleep(3*time.Second)
+			time.Sleep(3 * time.Second)
 
 			events := []*cloudformation.StackEvent{}
 
@@ -41,13 +54,7 @@ func PollStackEvents(sess *session.Session, stackId string, startEventId *string
 			}
 
 			startEventId = events[0].EventId
-
-			resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
-
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-
+			resp := describe(cfn, stackId)
 			status := *resp.Stacks[0].StackStatus
 
 			for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
