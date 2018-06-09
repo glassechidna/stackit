@@ -43,18 +43,16 @@ func NewTailPrinterWithOptions(showTimestamp, showColors bool) TailPrinter {
 func (tp *TailPrinter) FormatTailEvent(tailEvent TailStackEvent) string {
 	resourceNameLength := 20 // TODO: determine this from template/API
 
-	event := tailEvent.Event
-
-	timestampPrefix := event.Timestamp.Format(tp.timestampFormat)
+	timestampPrefix := tailEvent.Timestamp.Format(tp.timestampFormat)
 
 	reasonPart := ""
-	if event.ResourceStatusReason != nil {
-		reasonPart = fmt.Sprintf("- %s", *event.ResourceStatusReason)
+	if tailEvent.ResourceStatusReason != nil {
+		reasonPart = fmt.Sprintf("- %s", *tailEvent.ResourceStatusReason)
 	}
 
-	line := fmt.Sprintf("%s %s - %s %s", timestampPrefix, fixedLengthString(resourceNameLength, *event.LogicalResourceId), *event.ResourceStatus, reasonPart)
+	line := fmt.Sprintf("%s %s - %s %s", timestampPrefix, fixedLengthString(resourceNameLength, *tailEvent.LogicalResourceId), *tailEvent.ResourceStatus, reasonPart)
 
-	if isBadStatus(*event.ResourceStatus) && tp.failureColor != nil {
+	if isBadStatus(*tailEvent.ResourceStatus) && tp.failureColor != nil {
 		return tp.failureColor.Sprint(line)
 	} else {
 		return line

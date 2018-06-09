@@ -54,11 +54,11 @@ func CancelOnInterrupt(sess *session.Session, stackId *string, isNewStackCreatio
 	}()
 }
 
-func PrintOutputs(sess *session.Session, stackId *string) {
+func PrintOutputs(sess *session.Session, stackId string) {
 	cfn := cloudformation.New(sess)
 
 	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{
-		StackName: stackId,
+		StackName: &stackId,
 	})
 
 	if err != nil {
@@ -75,7 +75,7 @@ func PrintOutputs(sess *session.Session, stackId *string) {
 	fmt.Println(string(bytes))
 }
 
-func Down(sess *session.Session, stackName string) (*string, *string) {
+func Down(sess *session.Session, stackName string, events chan<- TailStackEvent) error {
 	cfn := cloudformation.New(sess)
 
 	_, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackName})
@@ -90,16 +90,15 @@ func Down(sess *session.Session, stackName string) (*string, *string) {
 			log.Fatal(err.Error())
 		}
 
-		stackId := resp.StackEvents[0].StackId
 		mostRecentEventIdSeen := resp.StackEvents[0].EventId
 
 		cfn.DeleteStack(&cloudformation.DeleteStackInput{
 			StackName: &stackName,
 		})
 
-		return stackId, mostRecentEventIdSeen
-
+		stackId := resp.StackEvents[0].StackId
+		return PollStackEvents(sess, *stackId, mostRecentEventIdSeen, events)
 	}
 
-	return nil, nil
+	return nil
 }

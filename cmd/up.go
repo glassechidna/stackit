@@ -65,8 +65,10 @@ var upCmd = &cobra.Command{
 			notificationArns,
 			previousTemplate)
 
+		events := make(chan stackit.TailStackEvent)
+
 		sess := stackit.AwsSession(profile, region)
-		output, err := stackit.Up(sess, parsed)
+		stackId, err := stackit.Up(sess, parsed, events)
 
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
@@ -77,14 +79,8 @@ var upCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if !output.NoOp {
-			for {
-				tailEvent := <- *output.Channel
-				printer.PrintTailEvent(tailEvent)
-				if tailEvent.Done {
-					break
-				}
-			}
+		for tailEvent := range events {
+			printer.PrintTailEvent(tailEvent)
 		}
 
 		//
@@ -92,8 +88,8 @@ var upCmd = &cobra.Command{
 		//	stackit.CancelOnInterrupt(sess, stackId, isNewStack)
 		//}
 
-		exitIfFailedUpdate(sess, output.StackId)
-		stackit.PrintOutputs(sess, &output.StackId)
+		exitIfFailedUpdate(sess, stackId)
+		stackit.PrintOutputs(sess, stackId)
 	},
 }
 

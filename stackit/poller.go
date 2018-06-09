@@ -2,7 +2,6 @@ package stackit
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"time"
 	"log"
@@ -11,19 +10,13 @@ import (
 )
 
 type TailStackEvent struct {
-	Event *cloudformation.StackEvent
-	Done bool
+	cloudformation.StackEvent
 }
 
-func DoTailStack(sess *session.Session, stackId, startEventId *string) chan TailStackEvent {
-	channel := make(chan TailStackEvent)
-
-	if stackId == nil {
-		stackId = aws.String("")
-	}
+func PollStackEvents(sess *session.Session, stackId string, startEventId *string, channel chan<- TailStackEvent) error {
+	cfn := cloudformation.New(sess)
 
 	go func() {
-		cfn := cloudformation.New(sess)
 
 		for {
 			time.Sleep(3*time.Second)
@@ -31,7 +24,7 @@ func DoTailStack(sess *session.Session, stackId, startEventId *string) chan Tail
 			events := []*cloudformation.StackEvent{}
 
 			cfn.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
-				StackName: stackId,
+				StackName: &stackId,
 			}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 				for _, event := range page.StackEvents {
 					if *event.EventId == *startEventId {
@@ -49,7 +42,7 @@ func DoTailStack(sess *session.Session, stackId, startEventId *string) chan Tail
 
 			startEventId = events[0].EventId
 
-			resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: stackId})
+			resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
 
 			if err != nil {
 				log.Fatal(err.Error())
@@ -58,20 +51,20 @@ func DoTailStack(sess *session.Session, stackId, startEventId *string) chan Tail
 			status := *resp.Stacks[0].StackStatus
 
 			for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
-				event := events[ev_i]
 				done := IsTerminalStatus(status) && ev_i == 0
-
-				tailEvent := TailStackEvent{
-					Event: event,
-					Done:  done,
+				if done {
+					close(channel)
+					return
 				}
 
+				event := events[ev_i]
+				tailEvent := TailStackEvent{*event}
 				channel <- tailEvent
 			}
 		}
 	}()
 
-	return channel
+	return nil
 }
 
 func fixedLengthString(length int, str string) string {

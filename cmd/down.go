@@ -33,18 +33,12 @@ var downCmd = &cobra.Command{
 
 		sess := stackit.AwsSession(profile, region)
 
-		stackId, mostRecentEventIdSeen := stackit.Down(sess, stackName)
-		if stackId == nil { return }
+		channel := make(chan stackit.TailStackEvent)
+		stackit.Down(sess, stackName, channel)
 
-		channel := stackit.DoTailStack(sess, stackId, mostRecentEventIdSeen)
 		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
-
-		for {
-			tailEvent := <- channel
+		for tailEvent := range channel {
 			printer.PrintTailEvent(tailEvent)
-			if tailEvent.Done {
-				break
-			}
 		}
 	},
 }
