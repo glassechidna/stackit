@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"time"
 	"github.com/pkg/errors"
-	"github.com/davecgh/go-spew/spew"
 	"os"
 	"strings"
 )
@@ -157,7 +156,6 @@ func updateStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 				return stackId, nil
 			}
 		}
-		spew.Dump(err)
 		return stackId, err
 	}
 
@@ -184,7 +182,6 @@ func createStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 	resp, err := cfn.CreateStack(createInput)
 
 	if err != nil {
-		spew.Dump(err)
 		return "", err
 	} else {
 		eventId := ""
