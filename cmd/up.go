@@ -103,6 +103,18 @@ func exitIfFailedUpdate(sess *session.Session, stackId string) {
 	}
 }
 
+func keyvalSliceToMap(slice []string) map[string]string {
+	theMap := map[string]string{}
+
+	for _, paramPair := range slice {
+		parts := strings.SplitN(paramPair, "=", 2)
+		name, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		theMap[name] = value
+	}
+
+	return theMap
+}
+
 func parseCLIInput(
 	stackName,
 	serviceRole,
@@ -142,19 +154,10 @@ func parseCLIInput(
 
 	input.PreviousTemplate = previousTemplate
 
-	paramMap := make(map[string]string)
-
-	populateParamMap := func(slice []string) {
-		for _, paramPair := range slice {
-			parts := strings.SplitN(paramPair, "=", 2)
-			name, value := parts[0], parts[1]
-			paramMap[name] = value
-		}
+	paramMap := keyvalSliceToMap(viper.GetStringSlice("parameters"))
+	for key, val := range keyvalSliceToMap(cliParamValues) {
+		paramMap[key] = val
 	}
-
-	configFileParameters := viper.GetStringSlice("parameters")
-	populateParamMap(configFileParameters)
-	populateParamMap(cliParamValues)
 
 	params := []*cloudformation.Parameter{}
 	for name, value := range paramMap {
@@ -172,34 +175,11 @@ func parseCLIInput(
 	}
 
 	input.Parameters = params
+	input.NotificationARNs = notificationArns
 
 	if len(tags) > 0 {
-		cfnTags := []*cloudformation.Tag{}
-
-		for _, tagPair := range tags {
-			parts := strings.SplitN(tagPair, "=", 2)
-			name, value := parts[0], parts[1]
-
-			cfnTags = append(cfnTags, &cloudformation.Tag{
-				Key: aws.String(name),
-				Value: aws.String(value),
-			})
-		}
-
-		input.Tags = cfnTags
+		input.Tags = keyvalSliceToMap(tags)
 	}
-
-	if len(notificationArns) > 0 {
-		cfnNotificationArns := []*string{}
-
-		for _, notificationArn := range notificationArns {
-			cfnNotificationArns = append(cfnNotificationArns, aws.String(notificationArn))
-		}
-
-		input.NotificationARNs = cfnNotificationArns
-	}
-
-	input.Capabilities = aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"})
 
 	return input
 }

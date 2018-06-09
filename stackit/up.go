@@ -17,10 +17,19 @@ type StackitUpInput struct {
 	TemplateBody     string
 	PreviousTemplate bool
 	Parameters       []*cloudformation.Parameter
-	Tags             []*cloudformation.Tag
-	NotificationARNs []*string
-	Capabilities     []*string
+	Tags             map[string]string
+	NotificationARNs []string
 	PopulateMissing  bool
+}
+
+func mapToTags(tagMap map[string]string) []*cloudformation.Tag {
+	tags := []*cloudformation.Tag{}
+
+	for key, val := range tagMap {
+		tags = append(tags, &cloudformation.Tag{Key: aws.String(key), Value: aws.String(val)})
+	}
+
+	return tags
 }
 
 func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudformation.Stack) error {
@@ -108,11 +117,11 @@ func updateStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 
 	updateInput := &cloudformation.UpdateStackInput{
 		StackName:           &input.StackName,
-		Capabilities:        input.Capabilities,
+		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
 		UsePreviousTemplate: &input.PreviousTemplate,
 		Parameters:          input.Parameters,
-		Tags:                input.Tags,
-		NotificationARNs:    input.NotificationARNs,
+		Tags:                mapToTags(input.Tags),
+		NotificationARNs:    aws.StringSlice(input.NotificationARNs),
 	}
 	if len(input.RoleARN) > 0 {
 		updateInput.RoleARN = &input.RoleARN
@@ -148,11 +157,11 @@ func createStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 
 	createInput := &cloudformation.CreateStackInput{
 		StackName:        &input.StackName,
-		Capabilities:     input.Capabilities,
+		Capabilities:     aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
 		TemplateBody:     &input.TemplateBody,
 		Parameters:       input.Parameters,
-		Tags:             input.Tags,
-		NotificationARNs: input.NotificationARNs,
+		Tags:             mapToTags(input.Tags),
+		NotificationARNs: aws.StringSlice(input.NotificationARNs),
 	}
 	if len(input.RoleARN) > 0 {
 		createInput.RoleARN = &input.RoleARN
