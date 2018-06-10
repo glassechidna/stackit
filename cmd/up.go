@@ -21,7 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"io/ioutil"
 	"strings"
-	"github.com/glassechidna/stackit/stackit"
+	"github.com/glassechidna/stackit/pkg/stackit"
 	"os"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/fatih/color"

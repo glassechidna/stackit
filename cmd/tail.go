@@ -17,7 +17,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/glassechidna/stackit/stackit"
+	"github.com/glassechidna/stackit/pkg/stackit"
 )
 
 var tailCmd = &cobra.Command{
