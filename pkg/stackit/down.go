@@ -12,7 +12,7 @@ func (s *Stackit) Down(events chan<- TailStackEvent) {
 		token := generateToken()
 
 		_, err = s.api.DeleteStack(&cloudformation.DeleteStackInput{
-			StackName: &s.stackId,
+			StackName:          &s.stackId,
 			ClientRequestToken: &token,
 		})
 		if err != nil {
@@ -25,4 +25,3 @@ func (s *Stackit) Down(events chan<- TailStackEvent) {
 		close(events)
 	}
 }
-

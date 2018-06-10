@@ -1,19 +1,19 @@
 package stackit
 
 import (
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-				"log"
+	"encoding/json"
 	"fmt"
-			"encoding/json"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/pkg/errors"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-		)
+	"log"
+)
 
 type Stackit struct {
-	api cloudformationiface.CloudFormationAPI
+	api       cloudformationiface.CloudFormationAPI
 	stackName string
-	stackId string
+	stackId   string
 }
 
 func NewStackit(api cloudformationiface.CloudFormationAPI, stackName string) *Stackit {

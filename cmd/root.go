@@ -31,9 +31,9 @@ var RootCmd = &cobra.Command{
 	Long: `stackit is a CLI tool to synchronously and idempotently operate on AWS
 CloudFormation stacks - a perfect complement for continuous integration systems
 and developers who prefer the comfort of the command line.`,
-// Uncomment the following line if your bare application
-// has an action associated with it:
-//	Run: func(cmd *cobra.Command, args []string) { },
+	// Uncomment the following line if your bare application
+	// has an action associated with it:
+	//	Run: func(cmd *cobra.Command, args []string) { },
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -67,9 +67,9 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	viper.SetConfigName(".stackit") // name of config file (without extension)
-	viper.AddConfigPath(".")  // adding home directory as first search path
-	viper.AddConfigPath("$HOME")  // adding home directory as first search path
-	viper.AutomaticEnv()          // read in environment variables that match
+	viper.AddConfigPath(".")        // adding home directory as first search path
+	viper.AddConfigPath("$HOME")    // adding home directory as first search path
+	viper.AutomaticEnv()            // read in environment variables that match
 
 	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
@@ -77,6 +77,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr,"Using config file:", viper.ConfigFileUsed())
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }

@@ -1,11 +1,11 @@
 package stackit
 
 import (
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/pkg/errors"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/pkg/errors"
 )
 
 type StackitUpInput struct {
@@ -166,7 +166,6 @@ func (s *Stackit) createStack(input StackitUpInput, events chan<- TailStackEvent
 	}
 }
 
-   type mockCloudFormationClient struct {
-       cloudformationiface.CloudFormationAPI
-   }
-
+type mockCloudFormationClient struct {
+	cloudformationiface.CloudFormationAPI
+}

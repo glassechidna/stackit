@@ -1,18 +1,18 @@
 package stackit
 
 import (
+	"fmt"
 	"github.com/fatih/color"
 	"io"
-	"fmt"
 	"os"
 	"strings"
 )
 
 type TailPrinter struct {
 	timestampFormat string
-	successColor *color.Color
-	failureColor *color.Color
-	writer io.Writer
+	successColor    *color.Color
+	failureColor    *color.Color
+	writer          io.Writer
 }
 
 func NewTailPrinter() TailPrinter {
@@ -35,9 +35,9 @@ func NewTailPrinterWithOptions(showTimestamp, showColors bool) TailPrinter {
 
 	return TailPrinter{
 		timestampFormat: format,
-		successColor: successColor,
-		failureColor: failureColor,
-		writer: os.Stderr,
+		successColor:    successColor,
+		failureColor:    failureColor,
+		writer:          os.Stderr,
 	}
 }
 

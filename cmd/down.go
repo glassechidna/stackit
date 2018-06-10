@@ -15,10 +15,10 @@
 package cmd
 
 import (
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/glassechidna/stackit/pkg/stackit"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // downCmd represents the down command

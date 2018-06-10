@@ -15,18 +15,18 @@
 package cmd
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/fatih/color"
+	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"io/ioutil"
-	"strings"
-	"github.com/glassechidna/stackit/pkg/stackit"
 	"os"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/fatih/color"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"strings"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -154,14 +154,14 @@ func parseCLIInput(
 	params := []*cloudformation.Parameter{}
 	for name, value := range paramMap {
 		params = append(params, &cloudformation.Parameter{
-			ParameterKey: aws.String(name),
+			ParameterKey:   aws.String(name),
 			ParameterValue: aws.String(value),
 		})
 	}
 
 	for _, param := range previousParamValues {
 		params = append(params, &cloudformation.Parameter{
-			ParameterKey: aws.String(param),
+			ParameterKey:     aws.String(param),
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
@@ -178,7 +178,7 @@ func parseCLIInput(
 
 func awsSession(profile, region string) *session.Session {
 	sessOpts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+		SharedConfigState:       session.SharedConfigEnable,
 		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 	}
 
@@ -196,7 +196,6 @@ func awsSession(profile, region string) *session.Session {
 
 	return sess
 }
-
 
 func init() {
 	RootCmd.AddCommand(upCmd)

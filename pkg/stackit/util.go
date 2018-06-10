@@ -1,13 +1,13 @@
 package stackit
 
 import (
-	"math/rand"
-	"time"
 	"fmt"
-	"os"
-	"strings"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"math/rand"
+	"os"
+	"strings"
+	"time"
 )
 
 func generateToken() string {
@@ -34,4 +34,3 @@ func mapToTags(tagMap map[string]string) []*cloudformation.Tag {
 
 	return tags
 }
-

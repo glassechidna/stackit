@@ -1,8 +1,8 @@
 package stackit
 
 import (
-		"github.com/aws/aws-sdk-go/service/cloudformation"
-						"time"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"time"
 )
 
 type TailStackEvent struct {

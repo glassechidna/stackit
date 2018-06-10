@@ -29,6 +29,7 @@
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
     "service/cloudformation",
+    "service/cloudformation/cloudformationiface",
     "service/sts"
   ]
   revision = "31bd69f7db00cbf3d85d129e16d42304cb6e455f"
@@ -176,6 +177,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "01cd33fbc0531a7d9d7fa01b42cbe348a9e6d149b4934bb4201b94af81893c80"
+  inputs-digest = "986edd03646de701ad9f5af206c9ce2fb102aaa8bd53a03dac9d09da19730101"
   solver-name = "gps-cdcl"
   solver-version = 1
