@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/glassechidna/stackit/pkg/stackit"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // downCmd represents the down command
@@ -30,15 +31,17 @@ var downCmd = &cobra.Command{
 		stackName := viper.GetString("stack-name")
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
-
-		sess := stackit.AwsSession(profile, region)
-
-		channel := make(chan stackit.TailStackEvent)
-		stackit.Down(sess, stackName, channel)
-
 		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
-		for tailEvent := range channel {
-			printer.PrintTailEvent(tailEvent)
+
+		events := make(chan stackit.TailStackEvent)
+
+		sess := awsSession(profile, region)
+		api := cloudformation.New(sess)
+		sit := stackit.NewStackit(api, stackName)
+		go sit.Down(events)
+
+		for tailEvent := range events {
+			printOrExit(tailEvent, printer)
 		}
 	},
 }

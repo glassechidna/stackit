@@ -1,18 +1,14 @@
 package stackit
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws"
-	"time"
 	"github.com/pkg/errors"
-	"os"
-	"strings"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 )
 
 type StackitUpInput struct {
-	StackName        string
 	RoleARN          string
 	StackPolicyBody  string
 	TemplateBody     string
@@ -23,27 +19,9 @@ type StackitUpInput struct {
 	PopulateMissing  bool
 }
 
-func mapToTags(tagMap map[string]string) []*cloudformation.Tag {
-	tags := []*cloudformation.Tag{}
+func (s *Stackit) populateMissing(input *StackitUpInput) error {
+	stack, _ := s.describe()
 
-	prefix := "CFN_TAG_"
-	for _, envvar := range os.Environ() {
-		if strings.HasPrefix(envvar, prefix) {
-			sansPrefix := envvar[len(prefix):]
-			keyval := strings.SplitN(sansPrefix, "=", 2)
-			tags = append(tags, &cloudformation.Tag{Key: &keyval[0], Value: &keyval[1]})
-
-		}
-	}
-
-	for key, val := range tagMap {
-		tags = append(tags, &cloudformation.Tag{Key: aws.String(key), Value: aws.String(val)})
-	}
-
-	return tags
-}
-
-func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudformation.Stack) error {
 	maybeAddParam := func(name string) {
 		for _, param := range input.Parameters {
 			if *param.ParameterKey == name {
@@ -63,8 +41,7 @@ func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudf
 			maybeAddParam(*param.ParameterKey)
 		}
 	} else {
-		api := cloudformation.New(sess)
-		resp, err := api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: &input.TemplateBody})
+		resp, err := s.api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: &input.TemplateBody})
 		if err != nil {
 			return err
 		}
@@ -77,62 +54,66 @@ func populateMissing(sess *session.Session, input *StackitUpInput, stack *cloudf
 	return nil
 }
 
-func CleanStackExists(sess *session.Session, name string) (bool, *cloudformation.Stack) {
-	cfn := cloudformation.New(sess)
-
-	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &name})
-	stackExists := err == nil
-
-	if resp != nil && len(resp.Stacks) > 0 {
-		stack := resp.Stacks[0]
-		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
-			cfn.DeleteStack(&cloudformation.DeleteStackInput{StackName: &name})
-			stackExists = false
-			time.Sleep(time.Duration(3) * time.Second) // wait for cloudformation to register stack deletion
-		}
+func (s *Stackit) waitForCleanStack(events chan<- TailStackEvent) {
+	stack, err := s.describe()
+	if err != nil {
+		s.error(err, events)
 	}
 
-	if stackExists {
-		return true, resp.Stacks[0]
-	} else {
-		return false, nil
+	if stack != nil { // stack already exists
+		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
+			token := generateToken()
+			s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &s.stackId, ClientRequestToken: &token})
+			s.PollStackEvents(token, events)
+		}
 	}
 }
 
-func Up(sess *session.Session, input StackitUpInput, events chan<- TailStackEvent) (string, error) {
-	stackExists, stack := CleanStackExists(sess, input.StackName)
+func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
+	s.waitForCleanStack(events)
+	stack, err := s.describe()
+	if err != nil {
+		s.error(err, events)
+	}
 
-	if stackExists {
+	if stack != nil { // stack already exists
 		if input.PopulateMissing {
-			err := populateMissing(sess, &input, stack)
+			err := s.populateMissing(&input)
 			if err != nil {
-				return "", errors.Wrap(err, "populating missing parameters")
+				s.error(errors.Wrap(err, "populating missing parameters"), events)
+				return
 			}
 		}
-		return updateStack(sess, input, events)
+		token, err := s.updateStack(input, events)
+		if err != nil {
+			s.error(errors.Wrap(err, "updating stack"), events)
+			return
+		} else if token == "" { // update is a no-op, nothing to change
+			close(events)
+			return
+		}
+		s.PollStackEvents(token, events)
 	} else {
-		return createStack(sess, input, events)
+		token, err := s.createStack(input, events)
+		if err != nil {
+			s.error(errors.Wrap(err, "creating stack"), events)
+			return
+		}
+		s.PollStackEvents(token, events)
 	}
 }
 
-func updateStack(sess *session.Session, input StackitUpInput, events chan<- TailStackEvent) (string, error) {
-	cfn := cloudformation.New(sess)
-
-	describeResp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
-		StackName: &input.StackName,
-	})
-
-	if err != nil {
-		return "", err
-	}
+func (s *Stackit) updateStack(input StackitUpInput, events chan<- TailStackEvent) (string, error) {
+	token := generateToken()
 
 	updateInput := &cloudformation.UpdateStackInput{
-		StackName:           &input.StackName,
+		StackName:           &s.stackId,
 		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
 		UsePreviousTemplate: &input.PreviousTemplate,
 		Parameters:          input.Parameters,
 		Tags:                mapToTags(input.Tags),
 		NotificationARNs:    aws.StringSlice(input.NotificationARNs),
+		ClientRequestToken:  &token,
 	}
 	if len(input.RoleARN) > 0 {
 		updateInput.RoleARN = &input.RoleARN
@@ -143,35 +124,31 @@ func updateStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 	if len(input.TemplateBody) > 0 {
 		updateInput.TemplateBody = &input.TemplateBody
 	}
-	_, err = cfn.UpdateStack(updateInput)
-
-	event := describeResp.StackEvents[0]
-	eventIdToTail := event.EventId
-	stackId := *event.StackId
+	_, err := s.api.UpdateStack(updateInput)
 
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-				close(events)
-				return stackId, nil
+				return "", nil
 			}
 		}
-		return stackId, err
+		return "", err
 	}
 
-	return stackId, PollStackEvents(sess, stackId, eventIdToTail, events)
+	return token, nil
 }
 
-func createStack(sess *session.Session, input StackitUpInput, events chan<- TailStackEvent) (string, error) {
-	cfn := cloudformation.New(sess)
+func (s *Stackit) createStack(input StackitUpInput, events chan<- TailStackEvent) (string, error) {
+	token := generateToken()
 
 	createInput := &cloudformation.CreateStackInput{
-		StackName:        &input.StackName,
-		Capabilities:     aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
-		TemplateBody:     &input.TemplateBody,
-		Parameters:       input.Parameters,
-		Tags:             mapToTags(input.Tags),
-		NotificationARNs: aws.StringSlice(input.NotificationARNs),
+		StackName:          &s.stackName,
+		Capabilities:       aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
+		TemplateBody:       &input.TemplateBody,
+		Parameters:         input.Parameters,
+		Tags:               mapToTags(input.Tags),
+		NotificationARNs:   aws.StringSlice(input.NotificationARNs),
+		ClientRequestToken: &token,
 	}
 	if len(input.RoleARN) > 0 {
 		createInput.RoleARN = &input.RoleARN
@@ -179,13 +156,17 @@ func createStack(sess *session.Session, input StackitUpInput, events chan<- Tail
 	if len(input.StackPolicyBody) > 0 {
 		createInput.StackPolicyBody = &input.StackPolicyBody
 	}
-	resp, err := cfn.CreateStack(createInput)
 
+	resp, err := s.api.CreateStack(createInput)
 	if err != nil {
 		return "", err
 	} else {
-		eventId := ""
-		stackId := *resp.StackId
-		return stackId, PollStackEvents(sess, stackId, &eventId, events)
+		s.stackId = *resp.StackId
+		return token, nil
 	}
 }
+
+   type mockCloudFormationClient struct {
+       cloudformationiface.CloudFormationAPI
+   }
+

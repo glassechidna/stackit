@@ -16,29 +16,27 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/glassechidna/stackit/pkg/stackit"
-)
+		)
 
 var tailCmd = &cobra.Command{
 	Use:   "tail",
 	Short: "Tail output of stack change in progress",
 	Run: func(cmd *cobra.Command, args []string) {
-		region := viper.GetString("region")
-		profile := viper.GetString("profile")
-		stackName := viper.GetString("stack-name")
-		showTimestamps := !viper.GetBool("no-timestamps")
-		showColor := !viper.GetBool("no-color")
-
-		sess := stackit.AwsSession(profile, region)
-
-		channel := make(chan stackit.TailStackEvent)
-		stackit.PollStackEvents(sess, stackName, nil, channel)
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
-
-		for tailEvent := range channel {
-			printer.PrintTailEvent(tailEvent)
-		}
+		//region := viper.GetString("region")
+		//profile := viper.GetString("profile")
+		//stackName := viper.GetString("stack-name")
+		//showTimestamps := !viper.GetBool("no-timestamps")
+		//showColor := !viper.GetBool("no-color")
+		//
+		//sess := stackit.AwsSession(profile, region)
+		//
+		//channel := make(chan stackit.TailStackEvent)
+		//stackit.PollStackEvents(sess, stackName, nil, channel)
+		//printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
+		//
+		//for tailEvent := range channel {
+		//	printer.PrintTailEvent(tailEvent)
+		//}
 	},
 }
 

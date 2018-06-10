@@ -5,6 +5,7 @@ import (
 	"io"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type TailPrinter struct {
@@ -63,4 +64,13 @@ func (tp *TailPrinter) PrintTailEvent(tailEvent TailStackEvent) {
 	line := tp.FormatTailEvent(tailEvent)
 	tp.writer.Write([]byte(line))
 	tp.writer.Write([]byte("\n"))
+}
+
+func fixedLengthString(length int, str string) string {
+	verb := fmt.Sprintf("%%%d.%ds", length, length)
+	return fmt.Sprintf(verb, str)
+}
+
+func isBadStatus(status string) bool {
+	return strings.HasSuffix(status, "_FAILED")
 }

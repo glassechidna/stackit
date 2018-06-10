@@ -2,64 +2,55 @@ package stackit
 
 import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws"
-	"log"
+				"log"
 	"fmt"
-	"os"
-	"os/signal"
-	"encoding/json"
-)
+			"encoding/json"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/pkg/errors"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+		)
 
-func AwsSession(profile, region string) *session.Session {
-	sessOpts := session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-	}
-
-	if len(profile) > 0 {
-		sessOpts.Profile = profile
-	}
-
-	sess, _ := session.NewSessionWithOptions(sessOpts)
-	config := aws.NewConfig()
-
-	if len(region) > 0 {
-		config.Region = aws.String(region)
-		sess.Config = config
-	}
-
-	return sess
+type Stackit struct {
+	api cloudformationiface.CloudFormationAPI
+	stackName string
+	stackId string
 }
 
-func CancelOnInterrupt(sess *session.Session, stackId *string, isNewStackCreation bool) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
+func NewStackit(api cloudformationiface.CloudFormationAPI, stackName string) *Stackit {
+	return &Stackit{api: api, stackName: stackName}
+}
 
-	cfn := cloudformation.New(sess)
+func (s *Stackit) describe() (*cloudformation.Stack, error) {
+	stackName := s.stackId
+	if len(stackName) == 0 {
+		stackName = s.stackName
+	}
 
-	go func() {
-		<- sigs
-
-		if isNewStackCreation {
-			cfn.DeleteStack(&cloudformation.DeleteStackInput{
-				StackName: stackId,
-			})
-		} else {
-			cfn.CancelUpdateStack(&cloudformation.CancelUpdateStackInput{
-				StackName: stackId,
-			})
+	resp, err := s.api.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackName})
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			code := awsErr.Code()
+			if code == "ThrottlingException" {
+				return s.describe()
+			} else if code == "ValidationError" {
+				return nil, nil
+			}
 		}
-	}()
+		return nil, errors.Wrap(err, "determining stack status")
+	}
+
+	stack := resp.Stacks[0]
+	s.stackId = *stack.StackId
+	return stack, nil
 }
 
-func PrintOutputs(sess *session.Session, stackId string) {
-	cfn := cloudformation.New(sess)
+func (s *Stackit) error(err error, events chan<- TailStackEvent) {
+	events <- TailStackEvent{StackitError: err}
+	close(events)
+}
 
-	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{
-		StackName: &stackId,
-	})
+func (s *Stackit) PrintOutputs() {
+	stack, err := s.describe()
 
 	if err != nil {
 		log.Fatal(err.Error())
@@ -67,7 +58,7 @@ func PrintOutputs(sess *session.Session, stackId string) {
 
 	outputMap := make(map[string]string)
 
-	for _, output := range resp.Stacks[0].Outputs {
+	for _, output := range stack.Outputs {
 		outputMap[*output.OutputKey] = *output.OutputValue
 	}
 
@@ -75,30 +66,12 @@ func PrintOutputs(sess *session.Session, stackId string) {
 	fmt.Println(string(bytes))
 }
 
-func Down(sess *session.Session, stackName string, events chan<- TailStackEvent) error {
-	cfn := cloudformation.New(sess)
-
-	_, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackName})
-	stackExists := err == nil
-
-	if stackExists {
-		resp, err := cfn.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
-			StackName: &stackName,
-		})
-
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-
-		mostRecentEventIdSeen := resp.StackEvents[0].EventId
-
-		cfn.DeleteStack(&cloudformation.DeleteStackInput{
-			StackName: &stackName,
-		})
-
-		stackId := resp.StackEvents[0].StackId
-		return PollStackEvents(sess, *stackId, mostRecentEventIdSeen, events)
+func (s *Stackit) IsSuccessfulState() (bool, error) {
+	stack, err := s.describe()
+	if err != nil {
+		return false, errors.Wrap(err, "determining stack status")
 	}
 
-	return nil
+	status := *stack.StackStatus
+	return status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE", nil
 }

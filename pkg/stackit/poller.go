@@ -1,86 +1,59 @@
 package stackit
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"time"
-	"fmt"
-	"strings"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+		"github.com/aws/aws-sdk-go/service/cloudformation"
+						"time"
 )
 
 type TailStackEvent struct {
 	cloudformation.StackEvent
+	StackitError error
 }
 
-func describe(cfn *cloudformation.CloudFormation, stackId string) *cloudformation.DescribeStacksOutput {
-	resp, err := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
-	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "ThrottlingException" {
-				return describe(cfn, stackId)
+func (s *Stackit) PollStackEvents(token string, channel chan<- TailStackEvent) {
+	lastSentEventId := ""
+
+	for {
+		time.Sleep(3 * time.Second)
+
+		events := []*cloudformation.StackEvent{}
+
+		s.api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
+			StackName: &s.stackId,
+		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
+			for _, event := range page.StackEvents {
+				if *event.EventId == lastSentEventId || *event.ClientRequestToken != token {
+					return false
+				}
+
+				events = append(events, event)
 			}
+			return true
+		})
+
+		if len(events) == 0 {
+			continue
 		}
-		panic(err)
+
+		lastSentEventId = *events[0].EventId
+		stack, err := s.describe()
+		if err != nil {
+			s.error(err, channel)
+		}
+		terminal := IsTerminalStatus(*stack.StackStatus)
+
+		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
+			done := terminal && ev_i == 0
+			if done {
+				close(channel)
+				return
+			}
+
+			event := events[ev_i]
+			tailEvent := TailStackEvent{*event, nil}
+			channel <- tailEvent
+		}
 	}
-	return resp
-}
-
-func PollStackEvents(sess *session.Session, stackId string, startEventId *string, channel chan<- TailStackEvent) error {
-	cfn := cloudformation.New(sess)
-
-	go func() {
-
-		for {
-			time.Sleep(3 * time.Second)
-
-			events := []*cloudformation.StackEvent{}
-
-			cfn.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
-				StackName: &stackId,
-			}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
-				for _, event := range page.StackEvents {
-					if *event.EventId == *startEventId {
-						return false
-					}
-
-					events = append(events, event)
-				}
-				return true
-			})
-
-			if len(events) == 0 {
-				continue
-			}
-
-			startEventId = events[0].EventId
-			resp := describe(cfn, stackId)
-			status := *resp.Stacks[0].StackStatus
-
-			for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
-				done := IsTerminalStatus(status) && ev_i == 0
-				if done {
-					close(channel)
-					return
-				}
-
-				event := events[ev_i]
-				tailEvent := TailStackEvent{*event}
-				channel <- tailEvent
-			}
-		}
-	}()
-
-	return nil
-}
-
-func fixedLengthString(length int, str string) string {
-	verb := fmt.Sprintf("%%%d.%ds", length, length)
-	return fmt.Sprintf(verb, str)
-}
-
-func isBadStatus(status string) bool {
-	return strings.HasSuffix(status, "_FAILED")
 }
 
 func IsTerminalStatus(status string) bool {

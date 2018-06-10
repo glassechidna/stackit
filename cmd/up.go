@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/fatih/color"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 )
 
 // up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
@@ -34,6 +35,19 @@ var paramValues []string
 var previousParamValues []string
 var tags []string
 var notificationArns []string
+
+func printOrExit(tailEvent stackit.TailStackEvent, printer stackit.TailPrinter) {
+	if tailEvent.StackitError != nil {
+		if awsErr, ok := tailEvent.StackitError.(awserr.Error); ok {
+			color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
+		} else {
+			color.New(color.FgRed).Fprintln(os.Stderr, tailEvent.StackitError.Error())
+		}
+		os.Exit(1)
+	}
+
+	printer.PrintTailEvent(tailEvent)
+}
 
 var upCmd = &cobra.Command{
 	Use:   "up",
@@ -55,7 +69,6 @@ var upCmd = &cobra.Command{
 		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
 
 		parsed := parseCLIInput(
-			stackName,
 			serviceRole,
 			stackPolicy,
 			template,
@@ -67,40 +80,21 @@ var upCmd = &cobra.Command{
 
 		events := make(chan stackit.TailStackEvent)
 
-		sess := stackit.AwsSession(profile, region)
-		stackId, err := stackit.Up(sess, parsed, events)
+		sess := awsSession(profile, region)
+		api := cloudformation.New(sess)
+		sit := stackit.NewStackit(api, stackName)
+		go sit.Up(parsed, events)
 
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok {
-				color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
-			} else {
-				color.New(color.FgRed).Fprintln(os.Stderr, err.Error())
-			}
+		for tailEvent := range events {
+			printOrExit(tailEvent, printer)
+		}
+
+		if success, _ := sit.IsSuccessfulState(); !success {
 			os.Exit(1)
 		}
 
-		for tailEvent := range events {
-			printer.PrintTailEvent(tailEvent)
-		}
-
-		//
-		//if cancelOnExit {
-		//	stackit.CancelOnInterrupt(sess, stackId, isNewStack)
-		//}
-
-		exitIfFailedUpdate(sess, stackId)
-		stackit.PrintOutputs(sess, stackId)
+		sit.PrintOutputs()
 	},
-}
-
-func exitIfFailedUpdate(sess *session.Session, stackId string) {
-	cfn := cloudformation.New(sess)
-	resp, _ := cfn.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackId})
-	status := *resp.Stacks[0].StackStatus
-
-	if status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE" {
-		os.Exit(1)
-	}
 }
 
 func keyvalSliceToMap(slice []string) map[string]string {
@@ -116,7 +110,6 @@ func keyvalSliceToMap(slice []string) map[string]string {
 }
 
 func parseCLIInput(
-	stackName,
 	serviceRole,
 	stackPolicy,
 	template string,
@@ -126,7 +119,6 @@ func parseCLIInput(
 	notificationArns []string,
 	previousTemplate bool) stackit.StackitUpInput {
 	input := stackit.StackitUpInput{
-		StackName: stackName,
 		PopulateMissing: true,
 	}
 
@@ -183,6 +175,28 @@ func parseCLIInput(
 
 	return input
 }
+
+func awsSession(profile, region string) *session.Session {
+	sessOpts := session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+	}
+
+	if len(profile) > 0 {
+		sessOpts.Profile = profile
+	}
+
+	sess, _ := session.NewSessionWithOptions(sessOpts)
+	config := aws.NewConfig()
+
+	if len(region) > 0 {
+		config.Region = aws.String(region)
+		sess.Config = config
+	}
+
+	return sess
+}
+
 
 func init() {
 	RootCmd.AddCommand(upCmd)
