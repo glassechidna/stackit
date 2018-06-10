@@ -54,27 +54,42 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 	return nil
 }
 
-func (s *Stackit) waitForCleanStack(events chan<- TailStackEvent) {
+func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) {
 	stack, err := s.Describe()
 	if err != nil {
 		s.error(err, events)
 	}
 
 	if stack != nil { // stack already exists
+		if !IsTerminalStatus(*stack.StackStatus) {
+			s.PollStackEvents("", func(event TailStackEvent) {
+				events <- event
+			})
+		}
+
+		stack, err = s.Describe()
+		if err != nil {
+			s.error(err, events)
+		}
+
 		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
 			token := generateToken()
 			s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &s.stackId, ClientRequestToken: &token})
-			s.PollStackEvents(token, events)
+			s.PollStackEvents(token, func(event TailStackEvent) {
+				events <- event
+			})
 		}
 	}
 }
 
 func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
-	s.waitForCleanStack(events)
+	s.stackId = ""
 	stack, err := s.Describe()
 	if err != nil {
 		s.error(err, events)
 	}
+
+	token := generateToken()
 
 	if stack != nil { // stack already exists
 		if input.PopulateMissing {
@@ -84,28 +99,29 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 				return
 			}
 		}
-		token, err := s.updateStack(input, events)
+		needsPolling, err := s.updateStack(token, input)
 		if err != nil {
 			s.error(errors.Wrap(err, "updating stack"), events)
 			return
-		} else if token == "" { // update is a no-op, nothing to change
+		} else if !needsPolling { // update is a no-op, nothing to change
 			close(events)
 			return
 		}
-		s.PollStackEvents(token, events)
 	} else {
-		token, err := s.createStack(input, events)
+		err = s.createStack(token, input)
 		if err != nil {
 			s.error(errors.Wrap(err, "creating stack"), events)
 			return
 		}
-		s.PollStackEvents(token, events)
 	}
+
+	s.PollStackEvents(token, func(event TailStackEvent) {
+		events <- event
+	})
+	close(events)
 }
 
-func (s *Stackit) updateStack(input StackitUpInput, events chan<- TailStackEvent) (string, error) {
-	token := generateToken()
-
+func (s *Stackit) updateStack(token string, input StackitUpInput) (bool, error) {
 	updateInput := &cloudformation.UpdateStackInput{
 		StackName:           &s.stackId,
 		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
@@ -129,18 +145,16 @@ func (s *Stackit) updateStack(input StackitUpInput, events chan<- TailStackEvent
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-				return "", nil
+				return false, nil
 			}
 		}
-		return "", err
+		return false, err
 	}
 
-	return token, nil
+	return true, nil
 }
 
-func (s *Stackit) createStack(input StackitUpInput, events chan<- TailStackEvent) (string, error) {
-	token := generateToken()
-
+func (s *Stackit) createStack(token string, input StackitUpInput) error {
 	createInput := &cloudformation.CreateStackInput{
 		StackName:          &s.stackName,
 		Capabilities:       aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
@@ -159,10 +173,10 @@ func (s *Stackit) createStack(input StackitUpInput, events chan<- TailStackEvent
 
 	resp, err := s.api.CreateStack(createInput)
 	if err != nil {
-		return "", err
+		return err
 	} else {
 		s.stackId = *resp.StackId
-		return token, nil
+		return nil
 	}
 }
 

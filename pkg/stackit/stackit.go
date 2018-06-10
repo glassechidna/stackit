@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/pkg/errors"
 	"log"
-	)
+)
 
 type Stackit struct {
 	api       cloudformationiface.CloudFormationAPI
@@ -73,5 +73,5 @@ func (s *Stackit) IsSuccessfulState() (bool, error) {
 	}
 
 	status := *stack.StackStatus
-	return status != "CREATE_COMPLETE" && status != "UPDATE_COMPLETE", nil
+	return status == "CREATE_COMPLETE" || status == "UPDATE_COMPLETE", nil
 }

@@ -83,7 +83,11 @@ var upCmd = &cobra.Command{
 		sess := awsSession(profile, region)
 		api := cloudformation.New(sess)
 		sit := stackit.NewStackit(api, stackName)
-		go sit.Up(parsed, events)
+
+		go func() {
+			sit.EnsureStackReady(events)
+			sit.Up(parsed, events)
+		}()
 
 		for tailEvent := range events {
 			printOrExit(tailEvent, printer)

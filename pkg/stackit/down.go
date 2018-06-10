@@ -20,8 +20,10 @@ func (s *Stackit) Down(events chan<- TailStackEvent) {
 			return
 		}
 
-		s.PollStackEvents(token, events)
-	} else {
-		close(events)
+		s.PollStackEvents(token, func(event TailStackEvent) {
+			events <- event
+		})
 	}
+
+	close(events)
 }

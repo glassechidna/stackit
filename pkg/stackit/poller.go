@@ -10,7 +10,7 @@ type TailStackEvent struct {
 	StackitError error
 }
 
-func (s *Stackit) PollStackEvents(token string, channel chan<- TailStackEvent) {
+func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEvent)) {
 	lastSentEventId := ""
 
 	for {
@@ -22,6 +22,10 @@ func (s *Stackit) PollStackEvents(token string, channel chan<- TailStackEvent) {
 			StackName: &s.stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 			for _, event := range page.StackEvents {
+				if token == "" {
+					token = *event.ClientRequestToken
+				}
+
 				if *event.EventId == lastSentEventId || *event.ClientRequestToken != token {
 					return false
 				}
@@ -38,20 +42,19 @@ func (s *Stackit) PollStackEvents(token string, channel chan<- TailStackEvent) {
 		lastSentEventId = *events[0].EventId
 		stack, err := s.Describe()
 		if err != nil {
-			s.error(err, channel)
+			callback(TailStackEvent{cloudformation.StackEvent{}, err})
 		}
 		terminal := IsTerminalStatus(*stack.StackStatus)
 
 		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
 			done := terminal && ev_i == 0
 			if done {
-				close(channel)
 				return
 			}
 
 			event := events[ev_i]
 			tailEvent := TailStackEvent{*event, nil}
-			channel <- tailEvent
+			callback(tailEvent)
 		}
 	}
 }

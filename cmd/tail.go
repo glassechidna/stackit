@@ -15,10 +15,10 @@
 package cmd
 
 import (
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/glassechidna/stackit/pkg/stackit"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 var tailCmd = &cobra.Command{
@@ -30,11 +30,10 @@ var tailCmd = &cobra.Command{
 		stackName := viper.GetString("stack-name")
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
 
 		sess := awsSession(profile, region)
 		api := cloudformation.New(sess)
-
-		events := make(chan stackit.TailStackEvent)
 		sit := stackit.NewStackit(api, stackName)
 
 		stack, _ := sit.Describe()
@@ -42,15 +41,9 @@ var tailCmd = &cobra.Command{
 			return
 		}
 
-		resp, _ := api.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{StackName: &stackName})
-		token := *resp.StackEvents[0].ClientRequestToken
-
-		go sit.PollStackEvents(token, events)
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
-
-		for tailEvent := range events {
-			printer.PrintTailEvent(tailEvent)
-		}
+		sit.PollStackEvents("", func(event stackit.TailStackEvent) {
+			printer.PrintTailEvent(event)
+		})
 	},
 }
 
