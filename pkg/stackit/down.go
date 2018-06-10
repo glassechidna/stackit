@@ -6,7 +6,7 @@ import (
 )
 
 func (s *Stackit) Down(events chan<- TailStackEvent) {
-	stack, err := s.describe()
+	stack, err := s.Describe()
 
 	if stack != nil { // stack exists
 		token := generateToken()

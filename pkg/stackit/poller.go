@@ -36,7 +36,7 @@ func (s *Stackit) PollStackEvents(token string, channel chan<- TailStackEvent) {
 		}
 
 		lastSentEventId = *events[0].EventId
-		stack, err := s.describe()
+		stack, err := s.Describe()
 		if err != nil {
 			s.error(err, channel)
 		}

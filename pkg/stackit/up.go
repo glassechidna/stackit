@@ -20,7 +20,7 @@ type StackitUpInput struct {
 }
 
 func (s *Stackit) populateMissing(input *StackitUpInput) error {
-	stack, _ := s.describe()
+	stack, _ := s.Describe()
 
 	maybeAddParam := func(name string) {
 		for _, param := range input.Parameters {
@@ -55,7 +55,7 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 }
 
 func (s *Stackit) waitForCleanStack(events chan<- TailStackEvent) {
-	stack, err := s.describe()
+	stack, err := s.Describe()
 	if err != nil {
 		s.error(err, events)
 	}
@@ -71,7 +71,7 @@ func (s *Stackit) waitForCleanStack(events chan<- TailStackEvent) {
 
 func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 	s.waitForCleanStack(events)
-	stack, err := s.describe()
+	stack, err := s.Describe()
 	if err != nil {
 		s.error(err, events)
 	}

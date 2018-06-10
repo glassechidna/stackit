@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/pkg/errors"
 	"log"
-)
+	)
 
 type Stackit struct {
 	api       cloudformationiface.CloudFormationAPI
@@ -20,7 +20,7 @@ func NewStackit(api cloudformationiface.CloudFormationAPI, stackName string) *St
 	return &Stackit{api: api, stackName: stackName}
 }
 
-func (s *Stackit) describe() (*cloudformation.Stack, error) {
+func (s *Stackit) Describe() (*cloudformation.Stack, error) {
 	stackName := s.stackId
 	if len(stackName) == 0 {
 		stackName = s.stackName
@@ -31,7 +31,7 @@ func (s *Stackit) describe() (*cloudformation.Stack, error) {
 		if awsErr, ok := err.(awserr.Error); ok {
 			code := awsErr.Code()
 			if code == "ThrottlingException" {
-				return s.describe()
+				return s.Describe()
 			} else if code == "ValidationError" {
 				return nil, nil
 			}
@@ -50,7 +50,7 @@ func (s *Stackit) error(err error, events chan<- TailStackEvent) {
 }
 
 func (s *Stackit) PrintOutputs() {
-	stack, err := s.describe()
+	stack, err := s.Describe()
 
 	if err != nil {
 		log.Fatal(err.Error())
@@ -67,7 +67,7 @@ func (s *Stackit) PrintOutputs() {
 }
 
 func (s *Stackit) IsSuccessfulState() (bool, error) {
-	stack, err := s.describe()
+	stack, err := s.Describe()
 	if err != nil {
 		return false, errors.Wrap(err, "determining stack status")
 	}
