@@ -22,11 +22,16 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 			StackName: &s.stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 			for _, event := range page.StackEvents {
-				if token == "" {
-					token = *event.ClientRequestToken
+				crt := "nil"
+				if event.ClientRequestToken != nil {
+					crt = *event.ClientRequestToken
 				}
 
-				if *event.EventId == lastSentEventId || *event.ClientRequestToken != token {
+				if token == "" {
+					token = crt
+				}
+
+				if *event.EventId == lastSentEventId || crt != token {
 					return false
 				}
 
