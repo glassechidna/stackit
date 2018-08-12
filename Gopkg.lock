@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:d083eaf4bdb760f4e23298b7adca6f956f6f52624ccacd6ce5a318237076e9a2"
+  digest = "1:ebbe0527d46f14d11abae0970e1743e6f1636039960135000ff7234e12377ffa"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -15,6 +15,7 @@
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
     "aws/credentials/stscreds",
+    "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
     "aws/endpoints",
@@ -23,6 +24,7 @@
     "aws/signer/v4",
     "internal/sdkio",
     "internal/sdkrand",
+    "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/query",
@@ -34,39 +36,42 @@
     "service/sts",
   ]
   pruneopts = "UT"
-  revision = "31bd69f7db00cbf3d85d129e16d42304cb6e455f"
-  version = "v1.13.44"
+  revision = "254f2f37e83d1b3585237fe166aacd14c1783e0b"
+  version = "v1.15.10"
 
 [[projects]]
-  digest = "1:4bb94bb2d837b5c7489d9e5e1fcffbc81fa1cb43024cbb4fe827787378f01e3b"
+  digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
   name = "github.com/fatih/color"
   packages = ["."]
   pruneopts = "UT"
-  revision = "507f6050b8568533fb3f5504de8e5205fa62a114"
-  version = "v1.6.0"
+  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
+  version = "v1.7.0"
 
 [[projects]]
-  digest = "1:38c783cf85b9454cc02a1a8319239800ed0af6c1c864adf19cea0539e134adad"
+  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4da3e2cfbabc9f751898f250b49f2439785783a1"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
 
 [[projects]]
-  digest = "1:fb46255681497314debedde38b64be32a75bae50bad107586c22f1662bf2d352"
+  digest = "1:fe8a03a8222d5b913f256972933d26d24ad7c8286692a42943bc01633cc8fce3"
   name = "github.com/go-ini/ini"
   packages = ["."]
   pruneopts = "UT"
-  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
-  version = "v1.37.0"
+  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
+  version = "v1.38.1"
 
 [[projects]]
-  digest = "1:b5090146529377f77830ae60f254e37bbf9bb89aac519829405c1ac010d1ec97"
+  branch = "master"
+  digest = "1:a361611b8c8c75a1091f00027767f7779b29cb37c456a71b8f2604c88057ab40"
   name = "github.com/hashicorp/hcl"
   packages = [
     ".",
     "hcl/ast",
     "hcl/parser",
+    "hcl/printer",
     "hcl/scanner",
     "hcl/strconv",
     "hcl/token",
@@ -75,7 +80,7 @@
     "json/token",
   ]
   pruneopts = "UT"
-  revision = "392dba7d905ed5d04a5794ba89f558b27e2ba1ca"
+  revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
   digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
@@ -93,11 +98,12 @@
   revision = "0b12d6b5"
 
 [[projects]]
-  digest = "1:79c55505b38424ce7dc479e8e0813db40245434db95a5d2e3390bfa24047b43c"
+  digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
   name = "github.com/magiconair/properties"
   packages = ["."]
   pruneopts = "UT"
-  revision = "51463bfca2576e06c62a8504b5c0f06d61312647"
+  revision = "c2353362d570a7bfa228149c62842019201cfb71"
+  version = "v1.8.0"
 
 [[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
@@ -116,26 +122,20 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:3b1bd950e1602fa2ae92650110628444bf205cca908d7491794b09e045a66ac0"
+  branch = "master"
+  digest = "1:5ab79470a1d0fb19b041a624415612f8236b3c06070161a910562f2b2d064355"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   pruneopts = "UT"
-  revision = "cc8532a8e9a55ea36402aa21efdf403a60d34096"
+  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
 
 [[projects]]
-  digest = "1:b2ee62e09bec113cf086d2ce0769efcc7bf79481aba8373fd8f7884e94df3462"
-  name = "github.com/pelletier/go-buffruneio"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c37440a7cf42ac63b919c752ca73a85067e05992"
-  version = "v0.2.0"
-
-[[projects]]
-  digest = "1:ffc2c3199837b02191e80b27cec0c8a32599f93b97277e21ff739b518a34120c"
+  digest = "1:95741de3af260a92cc5c7f3f3061e85273f5a81b5db20d4bd68da74bd521675e"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   pruneopts = "UT"
-  revision = "23f644976aa7c724adf4aec911dadf4af17840ab"
+  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
+  version = "v1.2.0"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -146,61 +146,66 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:612c049404353b151a3d9fd779b72a0905df1f799056c29202ad84d4fcb1b748"
+  digest = "1:bd1ae00087d17c5a748660b8e89e1043e1e5479d0fea743352cda2f8dd8c4f84"
   name = "github.com/spf13/afero"
   packages = [
     ".",
     "mem",
   ]
   pruneopts = "UT"
-  revision = "9be650865eab0c12963d8753212f4f9c66cdcf12"
+  revision = "787d034dfe70e44075ccc060d346146ef53270ad"
+  version = "v1.1.1"
 
 [[projects]]
-  digest = "1:9b28ee2984c69d78afe2ce52b1650ba91a6381f355ff08c1d0e53d9e66bd62fe"
+  digest = "1:516e71bed754268937f57d4ecb190e01958452336fa73dbac880894164e91c1f"
   name = "github.com/spf13/cast"
   packages = ["."]
   pruneopts = "UT"
-  revision = "acbeb36b902d72a7a4c18e8f3241075e7ab763e4"
-  version = "v1.1.0"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+  version = "v1.2.0"
 
 [[projects]]
-  digest = "1:72d32627c522be0bf1474e957e71d90579323f1ca9f396849b138aa76d494231"
+  digest = "1:645cabccbb4fa8aab25a956cbcbdf6a6845ca736b2c64e197ca7cbb9d210b939"
   name = "github.com/spf13/cobra"
   packages = ["."]
   pruneopts = "UT"
-  revision = "1362f95a8d6fe330d00a64380d6e0b65f4992c72"
+  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
+  version = "v0.0.3"
 
 [[projects]]
-  digest = "1:a57e9df4ec9730e40dd6bac6f88c5dfa62159de9e7c3273fb7d829c09d4b20d2"
+  branch = "master"
+  digest = "1:080e5f630945ad754f4b920e60b4d3095ba0237ebf88dc462eb28002932e3805"
   name = "github.com/spf13/jwalterweatherman"
   packages = ["."]
   pruneopts = "UT"
-  revision = "8f07c835e5cc1450c082fe3a439cf87b0cbb2d99"
+  revision = "7c0cea34c8ece3fbeb2b27ab9b59511d360fb394"
 
 [[projects]]
-  digest = "1:1b21a2b4058a779f290c7341cd93267492e0ecea6c8b54f64a4a5fd7ff131034"
+  digest = "1:dab83a1bbc7ad3d7a6ba1a1cc1760f25ac38cdf7d96a5cdd55cd915a4f5ceaf9"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "9a97c102cda95a86cec2345a6f09f55a939babf5"
+  version = "v1.0.2"
 
 [[projects]]
-  digest = "1:988cb1d740f5e90b338cc8fa4ae3977c75ab75a173792730d423da0f0d0575d2"
+  digest = "1:4fc8a61287ccfb4286e1ca5ad2ce3b0b301d746053bf44ac38cf34e40ae10372"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = "UT"
-  revision = "0967fc9aceab2ce9da34061253ac10fb99bba5b2"
+  revision = "907c19d40d9a6c9bb55f040ff4ae45271a4754b9"
+  version = "v1.1.0"
 
 [[projects]]
-  digest = "1:f1275b0d1ed7d43eeb7a0464a148258f04e66a4783514d5c790d4e970cc7df6d"
+  branch = "master"
+  digest = "1:33a43cb31975899cfcd81600d1390467db1778ae87102f80668a753fed8c663e"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "UT"
-  revision = "314a259e304ff91bd6985da2a7149bbf91237993"
+  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
 
 [[projects]]
-  digest = "1:c2e479b85643a71b8397b324f1d50dc9e7cb0db009dea2efc36ab67172a38bf3"
+  digest = "1:8029e9743749d4be5bc9f7d42ea1659471767860f0cdc34d37c3111bd308a295"
   name = "golang.org/x/text"
   packages = [
     "internal/gen",
@@ -211,14 +216,16 @@
     "unicode/norm",
   ]
   pruneopts = "UT"
-  revision = "470f45bf29f4147d6fbd7dfd0a02a848e49f5bf4"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
-  digest = "1:35c04c23c8aef680782e117c67e29750453c92d11448da616d2e399887e5fc86"
+  digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "UT"
-  revision = "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
