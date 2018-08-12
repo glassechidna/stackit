@@ -85,8 +85,10 @@ var upCmd = &cobra.Command{
 		sit := stackit.NewStackit(api, stackName)
 
 		go func() {
-			sit.EnsureStackReady(events)
-			sit.Up(parsed, events)
+			err := sit.EnsureStackReady(events)
+			if err == nil {
+				sit.Up(parsed, events)
+			}
 		}()
 
 		for tailEvent := range events {

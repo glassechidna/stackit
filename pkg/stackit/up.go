@@ -54,10 +54,11 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 	return nil
 }
 
-func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) {
+func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) error {
 	stack, err := s.Describe()
 	if err != nil {
 		s.error(err, events)
+		return err
 	}
 
 	if stack != nil { // stack already exists
@@ -70,6 +71,7 @@ func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) {
 		stack, err = s.Describe()
 		if err != nil {
 			s.error(err, events)
+			return err
 		}
 
 		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
@@ -80,6 +82,8 @@ func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) {
 			})
 		}
 	}
+
+	return nil
 }
 
 func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
