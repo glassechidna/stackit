@@ -2,10 +2,10 @@ package stackit
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/pkg/errors"
+	"fmt"
+	"time"
 )
 
 type StackitUpInput struct {
@@ -95,7 +95,28 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 
 	token := generateToken()
 
+	createInput := &cloudformation.CreateChangeSetInput{
+		ChangeSetName:       aws.String(fmt.Sprintf("csid-%d", time.Now().Unix())),
+		StackName:           &s.stackName,
+		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
+		Parameters:          input.Parameters,
+		Tags:                mapToTags(input.Tags),
+		NotificationARNs:    aws.StringSlice(input.NotificationARNs),
+		ClientToken:         &token,
+		UsePreviousTemplate: &input.PreviousTemplate,
+	}
+
+	if len(input.TemplateBody) > 0 {
+		createInput.TemplateBody = &input.TemplateBody
+	}
+
+	if len(input.RoleARN) > 0 {
+		createInput.RoleARN = &input.RoleARN
+	}
+
 	if stack != nil { // stack already exists
+		createInput.ChangeSetType = aws.String(cloudformation.ChangeSetTypeUpdate)
+
 		if input.PopulateMissing {
 			err := s.populateMissing(&input)
 			if err != nil {
@@ -103,20 +124,38 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 				return
 			}
 		}
-		needsPolling, err := s.updateStack(token, input)
-		if err != nil {
-			s.error(errors.Wrap(err, "updating stack"), events)
-			return
-		} else if !needsPolling { // update is a no-op, nothing to change
-			close(events)
-			return
-		}
 	} else {
-		err = s.createStack(token, input)
-		if err != nil {
-			s.error(errors.Wrap(err, "creating stack"), events)
-			return
-		}
+		createInput.ChangeSetType = aws.String(cloudformation.ChangeSetTypeCreate)
+	}
+
+	resp, err := s.api.CreateChangeSet(createInput)
+	if err != nil {
+		s.error(errors.Wrap(err, "creating change set"), events)
+		return
+	}
+
+	s.stackId = *resp.StackId
+
+	change, err := s.waitForChangeset(resp.Id)
+
+	if change != nil && len(change.Changes) == 0 { // update is a no-op, nothing to change
+		s.api.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
+		close(events)
+		return
+	}
+
+	if err != nil {
+		s.error(err, events)
+		return
+	}
+
+	_, err = s.api.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+		ChangeSetName:      resp.Id,
+		ClientRequestToken: &token,
+	})
+	if err != nil {
+		s.error(errors.Wrap(err, "executing change set"), events)
+		return
 	}
 
 	s.PollStackEvents(token, func(event TailStackEvent) {
@@ -125,65 +164,3 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 	close(events)
 }
 
-func (s *Stackit) updateStack(token string, input StackitUpInput) (bool, error) {
-	updateInput := &cloudformation.UpdateStackInput{
-		StackName:           &s.stackId,
-		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
-		UsePreviousTemplate: &input.PreviousTemplate,
-		Parameters:          input.Parameters,
-		Tags:                mapToTags(input.Tags),
-		NotificationARNs:    aws.StringSlice(input.NotificationARNs),
-		ClientRequestToken:  &token,
-	}
-	if len(input.RoleARN) > 0 {
-		updateInput.RoleARN = &input.RoleARN
-	}
-	if len(input.StackPolicyBody) > 0 {
-		updateInput.StackPolicyDuringUpdateBody = &input.StackPolicyBody
-	}
-	if len(input.TemplateBody) > 0 {
-		updateInput.TemplateBody = &input.TemplateBody
-	}
-	_, err := s.api.UpdateStack(updateInput)
-
-	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "ValidationError" && awsErr.Message() == "No updates are to be performed." {
-				return false, nil
-			}
-		}
-		return false, err
-	}
-
-	return true, nil
-}
-
-func (s *Stackit) createStack(token string, input StackitUpInput) error {
-	createInput := &cloudformation.CreateStackInput{
-		StackName:          &s.stackName,
-		Capabilities:       aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
-		TemplateBody:       &input.TemplateBody,
-		Parameters:         input.Parameters,
-		Tags:               mapToTags(input.Tags),
-		NotificationARNs:   aws.StringSlice(input.NotificationARNs),
-		ClientRequestToken: &token,
-	}
-	if len(input.RoleARN) > 0 {
-		createInput.RoleARN = &input.RoleARN
-	}
-	if len(input.StackPolicyBody) > 0 {
-		createInput.StackPolicyBody = &input.StackPolicyBody
-	}
-
-	resp, err := s.api.CreateStack(createInput)
-	if err != nil {
-		return err
-	} else {
-		s.stackId = *resp.StackId
-		return nil
-	}
-}
-
-type mockCloudFormationClient struct {
-	cloudformationiface.CloudFormationAPI
-}

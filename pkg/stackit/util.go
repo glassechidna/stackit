@@ -34,3 +34,12 @@ func mapToTags(tagMap map[string]string) []*cloudformation.Tag {
 
 	return tags
 }
+
+func stringInSlice(slice []string, s string) bool {
+	for _, ss := range slice {
+		if s == ss {
+			return true
+		}
+	}
+	return false
+}
