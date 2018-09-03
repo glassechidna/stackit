@@ -137,15 +137,17 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 	s.stackId = *resp.StackId
 
 	change, err := s.waitForChangeset(resp.Id)
+	isNoop := change != nil && len(change.Changes) == 0
 
-	if change != nil && len(change.Changes) == 0 { // update is a no-op, nothing to change
+	if isNoop { // update is a no-op, nothing to change
 		s.api.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
-		close(events)
-		return
 	}
 
 	if err != nil {
 		s.error(err, events)
+		return
+	} else if isNoop {
+		close(events)
 		return
 	}
 

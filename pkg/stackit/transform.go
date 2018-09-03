@@ -63,7 +63,7 @@ func (s *Stackit) waitForChangeset(id *string) (*cloudformation.DescribeChangeSe
 
 		status = *resp.Status
 		if status == "FAILED" {
-			return resp, errors.Wrap(err, "change set status failed")
+			return resp, errors.New(*resp.StatusReason)
 		}
 
 		time.Sleep(2 * time.Second)
