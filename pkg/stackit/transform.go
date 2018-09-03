@@ -62,8 +62,9 @@ func (s *Stackit) waitForChangeset(id *string) (*cloudformation.DescribeChangeSe
 		}
 
 		status = *resp.Status
-		if status == "FAILED" {
-			return resp, errors.New(*resp.StatusReason)
+		reason := *resp.StatusReason
+		if status == "FAILED" && reason != "The submitted information didn't contain changes. Submit different information to create a change set." {
+			return resp, errors.New(reason)
 		}
 
 		time.Sleep(2 * time.Second)
