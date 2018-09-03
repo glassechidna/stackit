@@ -61,8 +61,16 @@ func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) error {
 		return err
 	}
 
+	cleanup := func() {
+		token := generateToken()
+		s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &s.stackId, ClientRequestToken: &token})
+		s.PollStackEvents(token, func(event TailStackEvent) {
+			events <- event
+		})
+	}
+
 	if stack != nil { // stack already exists
-		if !IsTerminalStatus(*stack.StackStatus) {
+		if !IsTerminalStatus(*stack.StackStatus) && *stack.StackStatus != "REVIEW_IN_PROGRESS" {
 			s.PollStackEvents("", func(event TailStackEvent) {
 				events <- event
 			})
@@ -75,11 +83,16 @@ func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) error {
 		}
 
 		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
-			token := generateToken()
-			s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &s.stackId, ClientRequestToken: &token})
-			s.PollStackEvents(token, func(event TailStackEvent) {
-				events <- event
-			})
+			cleanup()
+		} else if *stack.StackStatus == "REVIEW_IN_PROGRESS" {
+			resp, err := s.api.ListStackResources(&cloudformation.ListStackResourcesInput{StackName: &s.stackId})
+			if err != nil {
+				s.error(err, events)
+				return err
+			}
+			if len(resp.StackResourceSummaries) == 0 {
+				cleanup()
+			}
 		}
 	}
 
@@ -165,4 +178,3 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 	})
 	close(events)
 }
-
