@@ -106,6 +106,14 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 		s.error(err, events)
 	}
 
+	if input.PopulateMissing && stack != nil {
+		err := s.populateMissing(&input)
+		if err != nil {
+			s.error(errors.Wrap(err, "populating missing parameters"), events)
+			return
+		}
+	}
+
 	token := generateToken()
 
 	createInput := &cloudformation.CreateChangeSetInput{
@@ -129,14 +137,6 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 
 	if stack != nil { // stack already exists
 		createInput.ChangeSetType = aws.String(cloudformation.ChangeSetTypeUpdate)
-
-		if input.PopulateMissing {
-			err := s.populateMissing(&input)
-			if err != nil {
-				s.error(errors.Wrap(err, "populating missing parameters"), events)
-				return
-			}
-		}
 	} else {
 		createInput.ChangeSetType = aws.String(cloudformation.ChangeSetTypeCreate)
 	}
