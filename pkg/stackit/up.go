@@ -22,14 +22,18 @@ type StackitUpInput struct {
 func (s *Stackit) populateMissing(input *StackitUpInput) error {
 	stack, _ := s.Describe()
 
-	maybeAddParam := func(name string) {
+	maybeAddParam := func(name, defaultValue *string) {
+		if defaultValue != nil {
+			return
+		}
+
 		for _, param := range input.Parameters {
-			if *param.ParameterKey == name {
+			if *param.ParameterKey == *name {
 				return
 			}
 		}
 		input.Parameters = append(input.Parameters, &cloudformation.Parameter{
-			ParameterKey:     &name,
+			ParameterKey:     name,
 			UsePreviousValue: aws.Bool(true),
 		})
 	}
@@ -38,7 +42,7 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 		input.PreviousTemplate = true
 
 		for _, param := range stack.Parameters {
-			maybeAddParam(*param.ParameterKey)
+			maybeAddParam(param.ParameterKey, nil)
 		}
 	} else {
 		resp, err := s.api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: &input.TemplateBody})
@@ -47,7 +51,7 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 		}
 
 		for _, param := range resp.Parameters {
-			maybeAddParam(*param.ParameterKey)
+			maybeAddParam(param.ParameterKey, param.DefaultValue)
 		}
 	}
 
