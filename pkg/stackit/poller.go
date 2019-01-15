@@ -10,7 +10,7 @@ type TailStackEvent struct {
 	StackitError error
 }
 
-func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEvent)) {
+func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEvent)) TailStackEvent {
 	lastSentEventId := ""
 
 	for {
@@ -52,13 +52,14 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 		terminal := IsTerminalStatus(*stack.StackStatus)
 
 		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
-			done := terminal && ev_i == 0
-			if done {
-				return
-			}
-
 			event := events[ev_i]
 			tailEvent := TailStackEvent{*event, nil}
+
+			done := terminal && ev_i == 0
+			if done {
+				return tailEvent
+			}
+
 			callback(tailEvent)
 		}
 	}
