@@ -6,6 +6,8 @@
 CloudFormation stacks - a perfect complement for continuous integration systems
 and developers who prefer the comfort of the command line.
 
+![Animated gif demonstrating functionality](https://user-images.githubusercontent.com/369053/51422660-92d00a80-1c06-11e9-81b2-da296b36cf6d.gif)
+
 ## Where
 
 The latest compiled `stackit` binaries for Linux, macOS and Windows can be
@@ -30,37 +32,6 @@ an `up` facade.
 ## How
 
 ### `up`
-
-```
-$ cd sample
-$ cat .stackit.yml
-stack-name: stackit-test
-template: sample.yml
-param-value:
-  - DockerImage=redis
-  - Cluster=app-cluster-Cluster-1C2I18JXK9QNM
-$ stackit up
-Using config file: /Users/aidan/stackit/sample/.stackit.yml
-[10:06:29]         stackit-test - CREATE_IN_PROGRESS - User Initiated
-[10:06:34]             LogGroup - CREATE_IN_PROGRESS
-[10:06:34]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
-[10:06:34]          TargetGroup - CREATE_IN_PROGRESS
-[10:06:34]             LogGroup - CREATE_COMPLETE
-[10:06:35]          TargetGroup - CREATE_IN_PROGRESS - Resource creation Initiated
-[10:06:35]          TargetGroup - CREATE_COMPLETE
-[10:06:37]              TaskDef - CREATE_IN_PROGRESS
-[10:06:37]              TaskDef - CREATE_IN_PROGRESS - Resource creation Initiated
-[10:06:38]              TaskDef - CREATE_COMPLETE
-[10:06:40]         stackit-test - CREATE_COMPLETE
-{
-  "LogGroup": "stackit-test-LogGroup-JEIBPNV8J33R",
-  "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:26"
-}
-```
-
-In the above example `stackit` looks for a `.stackit.yml` in the current directory
-as insufficient arguments were passed on the command line. Alternatively, arguments
-can be passed in directly:
 
 ```
 stackit up --stack-name some-other-name # use this stack name, fallback to yml for rest
@@ -108,8 +79,6 @@ your stack in a different region.
 ## TODO
 
 * `stackit <stack-name> cancel`
-* `stackit <stack-name> change create`
-* `stackit <stack-name> change execute`
 * `stackit <stack-name> signal <logical-name>`
 
 ## Additional Flags
