@@ -6,18 +6,20 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/pkg/errors"
 	"log"
 )
 
 type Stackit struct {
 	api       cloudformationiface.CloudFormationAPI
+	stsApi    stsiface.STSAPI
 	stackName string
 	stackId   string
 }
 
-func NewStackit(api cloudformationiface.CloudFormationAPI, stackName string) *Stackit {
-	return &Stackit{api: api, stackName: stackName}
+func NewStackit(api cloudformationiface.CloudFormationAPI, stsApi stsiface.STSAPI, stackName string) *Stackit {
+	return &Stackit{api: api, stsApi: stsApi, stackName: stackName}
 }
 
 func (s *Stackit) Describe() (*cloudformation.Stack, error) {

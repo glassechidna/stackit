@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/fatih/color"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
@@ -81,8 +82,7 @@ var upCmd = &cobra.Command{
 		events := make(chan stackit.TailStackEvent)
 
 		sess := awsSession(profile, region)
-		api := cloudformation.New(sess)
-		sit := stackit.NewStackit(api, stackName)
+		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess), stackName)
 
 		go func() {
 			err := sit.EnsureStackReady(events)

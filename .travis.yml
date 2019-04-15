@@ -13,6 +13,7 @@ install:
 
 script:
   - go mod download
+  - go test ./...
   - CGO_ENABLED=0 gox -arch="amd64" -os="windows linux darwin"
 
 after_success:

@@ -3,8 +3,10 @@ package stackit
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/pkg/errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -103,6 +105,14 @@ func (s *Stackit) EnsureStackReady(events chan<- TailStackEvent) error {
 	return nil
 }
 
+func (s *Stackit) awsAccountId() (string, error) {
+	resp, err := s.stsApi.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	if err != nil {
+		return "", errors.Wrap(err, "getting aws account id")
+	}
+	return *resp.Account, nil
+}
+
 func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 	s.stackId = ""
 	stack, err := s.Describe()
@@ -135,8 +145,16 @@ func (s *Stackit) Up(input StackitUpInput, events chan<- TailStackEvent) {
 		createInput.TemplateBody = &input.TemplateBody
 	}
 
-	if len(input.RoleARN) > 0 {
-		createInput.RoleARN = &input.RoleARN
+	if roleArn := input.RoleARN; len(roleArn) > 0 {
+		if !strings.HasPrefix(roleArn, "arn:aws:iam") {
+			accountId, err := s.awsAccountId()
+			if err != nil {
+				s.error(errors.Wrap(err, "retrieving aws account id from sts"), events)
+				return
+			}
+			roleArn = fmt.Sprintf("arn:aws:iam::%s:role/%s", accountId, roleArn)
+		}
+		createInput.RoleARN = &roleArn
 	}
 
 	if stack != nil { // stack already exists

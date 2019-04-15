@@ -15,13 +15,14 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"fmt"
-	"time"
 	"io/ioutil"
+	"time"
 )
 
 var transformCmd = &cobra.Command{
@@ -35,8 +36,11 @@ var transformCmd = &cobra.Command{
 		params := keyvalSliceToMap(args)
 
 		sess := awsSession(profile, region)
-		api := cloudformation.New(sess)
-		sit := stackit.NewStackit(api, fmt.Sprintf("stackit-temp-%d", time.Now().Unix()))
+		sit := stackit.NewStackit(
+			cloudformation.New(sess),
+			sts.New(sess),
+			fmt.Sprintf("stackit-temp-%d", time.Now().Unix()),
+		)
 
 		original, err := ioutil.ReadFile(templatePath)
 		if err != nil {

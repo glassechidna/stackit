@@ -16,12 +16,12 @@ package cmd
 
 import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// downCmd represents the down command
 var downCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Delete stack",
@@ -36,8 +36,7 @@ var downCmd = &cobra.Command{
 		events := make(chan stackit.TailStackEvent)
 
 		sess := awsSession(profile, region)
-		api := cloudformation.New(sess)
-		sit := stackit.NewStackit(api, stackName)
+		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess), stackName)
 		go sit.Down(events)
 
 		for tailEvent := range events {
