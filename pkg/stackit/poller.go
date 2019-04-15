@@ -1,6 +1,7 @@
 package stackit
 
 import (
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"time"
 )
@@ -18,7 +19,7 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 
 		events := []*cloudformation.StackEvent{}
 
-		s.api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
+		err := s.api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
 			StackName: &s.stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 			for _, event := range page.StackEvents {
@@ -40,6 +41,18 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 			return true
 		})
 
+		if err != nil {
+			if awsErr, ok := err.(awserr.Error); ok {
+				code := awsErr.Code()
+				if code == "ThrottlingException" {
+					continue
+				}
+			}
+			event := TailStackEvent{cloudformation.StackEvent{}, err}
+			callback(event)
+			return event
+		}
+
 		if len(events) == 0 {
 			continue
 		}
@@ -47,7 +60,9 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 		lastSentEventId = *events[0].EventId
 		stack, err := s.Describe()
 		if err != nil {
-			callback(TailStackEvent{cloudformation.StackEvent{}, err})
+			event := TailStackEvent{cloudformation.StackEvent{}, err}
+			callback(event)
+			return event
 		}
 		terminal := IsTerminalStatus(*stack.StackStatus)
 
