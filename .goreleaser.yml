@@ -1,0 +1,52 @@
+before:
+  hooks: []
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+archive:
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+nfpm:
+  vendor: stackit
+  homepage: https://github.com/glassechidna/stackit
+  maintainer: Aidan Steele <aidan.steele@glassechidna.com.au>
+  description: stackit is a cross-platform CloudFormation CLI tool for easy synchronous and idempotent stack updates
+  formats:
+    - deb
+brew:
+  github:
+    owner: glassechidna
+    name: homebrew-taps
+  commit_author:
+    name: Aidan Steele
+    email: aidan.steele@glassechidna.com.au
+  homepage: https://github.com/glassechidna/stackit
+  description: stackit is a cross-platform CloudFormation CLI tool for easy synchronous and idempotent stack updates
+scoop:
+  bucket:
+    owner: glassechidna
+    name: scoop-bucket
+  commit_author:
+    name: Aidan Steele
+    email: aidan.steele@glassechidna.com.au
+  homepage: https://github.com/glassechidna/stackit
+  description: stackit is a cross-platform CloudFormation CLI tool for easy synchronous and idempotent stack updates
+  license: MIT
