@@ -1,9 +1,11 @@
 workflow "Release" {
   on = "push"
-  resolves = [
-    "goreleaser",
-    "test"
-  ]
+  resolves = ["goreleaser"]
+}
+
+workflow "CI" {
+  on = "push"
+  resolves = ["test"]
 }
 
 action "is-tag" {
