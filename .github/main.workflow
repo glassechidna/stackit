@@ -1,6 +1,9 @@
 workflow "Release" {
   on = "push"
-  resolves = ["goreleaser"]
+  resolves = [
+    "goreleaser",
+    "test"
+  ]
 }
 
 action "is-tag" {
@@ -8,10 +11,21 @@ action "is-tag" {
   args = "tag"
 }
 
+action "not-tag" {
+  uses = "actions/bin/filter@master"
+  args = "not tag"
+}
+
+action "test" {
+  uses = "docker://golang:1.12-alpine"
+  args = "go test ./..."
+  needs = ["not-tag"]
+}
+
 action "goreleaser" {
   uses = "docker://goreleaser/goreleaser"
   secrets = [
-    "GITHUB_TOKEN"
+    "GORELEASER_GITHUB_TOKEN"
   ]
   args = "release"
   needs = ["is-tag"]
