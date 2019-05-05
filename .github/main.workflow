@@ -19,7 +19,7 @@ action "not-tag" {
 }
 
 action "test" {
-  uses = "docker://golang:1.12-alpine"
+  uses = "docker://golang:1.12"
   args = "go test ./..."
   needs = ["not-tag"]
 }
