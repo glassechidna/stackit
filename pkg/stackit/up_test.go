@@ -65,6 +65,16 @@ func TestServiceRoleArnDoesntTriggerStsCall(t *testing.T) {
 		return nil, errors.New("done")
 	}
 
+	capi.DescribeStacksF = func(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+		return &cloudformation.DescribeStacksOutput{
+			Stacks: []*cloudformation.Stack{
+				{
+					StackId: aws.String("arn:aws:cloudformation:ap-southeast-2:657110686698:stack/stack-name/58ed6a10-3e2f-11e9-bc5f-0a9966e9c45e"),
+				},
+			},
+		}, nil
+	}
+
 	ch := make(chan TailStackEvent)
 	go s.Up(input, ch)
 
