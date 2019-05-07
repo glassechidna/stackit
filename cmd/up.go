@@ -67,7 +67,7 @@ var upCmd = &cobra.Command{
 
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
 
 		parsed := parseCLIInput(
 			serviceRole,
@@ -99,7 +99,7 @@ var upCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		sit.PrintOutputs()
+		sit.PrintOutputs(stackId, cmd.OutOrStdout())
 	},
 }
 

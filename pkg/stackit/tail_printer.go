@@ -16,10 +16,10 @@ type TailPrinter struct {
 }
 
 func NewTailPrinter() TailPrinter {
-	return NewTailPrinterWithOptions(true, true)
+	return NewTailPrinterWithOptions(true, true, os.Stderr)
 }
 
-func NewTailPrinterWithOptions(showTimestamp, showColors bool) TailPrinter {
+func NewTailPrinterWithOptions(showTimestamp, showColors bool, writer io.Writer) TailPrinter {
 	format := ""
 	if showTimestamp {
 		format = "[03:04:05]"
@@ -37,7 +37,7 @@ func NewTailPrinterWithOptions(showTimestamp, showColors bool) TailPrinter {
 		timestampFormat: format,
 		successColor:    successColor,
 		failureColor:    failureColor,
-		writer:          os.Stderr,
+		writer:          writer,
 	}
 }
 

@@ -51,7 +51,7 @@ func (s *Stackit) error(err error, events chan<- TailStackEvent) {
 	close(events)
 }
 
-func (s *Stackit) PrintOutputs() {
+func (s *Stackit) PrintOutputs(writer io.Writer) {
 	stack, err := s.Describe()
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (s *Stackit) PrintOutputs() {
 	}
 
 	bytes, err := json.MarshalIndent(outputMap, "", "  ")
-	fmt.Println(string(bytes))
+	fmt.Fprintln(writer, string(bytes))
 }
 
 func (s *Stackit) IsSuccessfulState() (bool, error) {

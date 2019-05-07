@@ -31,7 +31,7 @@ var downCmd = &cobra.Command{
 		stackName := viper.GetString("stack-name")
 		showTimestamps := !viper.GetBool("no-timestamps")
 		showColor := !viper.GetBool("no-color")
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor)
+		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
 
 		events := make(chan stackit.TailStackEvent)
 
