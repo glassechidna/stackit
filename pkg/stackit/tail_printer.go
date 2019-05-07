@@ -10,7 +10,6 @@ import (
 
 type TailPrinter struct {
 	timestampFormat string
-	successColor    *color.Color
 	failureColor    *color.Color
 	writer          io.Writer
 }
@@ -25,17 +24,14 @@ func NewTailPrinterWithOptions(showTimestamp, showColors bool, writer io.Writer)
 		format = "[03:04:05]"
 	}
 
-	successColor := color.New(color.FgGreen)
 	failureColor := color.New(color.FgRed)
 
 	if !showColors {
-		successColor = nil
 		failureColor = nil
 	}
 
 	return TailPrinter{
 		timestampFormat: format,
-		successColor:    successColor,
 		failureColor:    failureColor,
 		writer:          writer,
 	}
