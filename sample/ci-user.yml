@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  GithubActionsUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: permissions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: cloudformation:*
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - ecs:*
+                  - logs:*
+                  - elasticloadbalancing:*
+                  - ec2:Describe*
+                Resource: "*"
+Outputs:
+  GithubActionsUser:
+    Value: !Ref GithubActionsUser

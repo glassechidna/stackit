@@ -2,8 +2,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 Parameters:
   DockerImage:
     Type: String
+    Default: nginx
   Cluster:
     Type: String
+    Default: default
   VpcId:
     Type: AWS::EC2::VPC::Id
     Default: vpc-8d2005e8
@@ -38,6 +40,7 @@ Resources:
 #          TargetGroupArn: !Ref TargetGroup
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: [TaskDef]
     Properties:
       HealthCheckIntervalSeconds: 60
       UnhealthyThresholdCount: 10
@@ -47,6 +50,8 @@ Resources:
       VpcId: !Ref VpcId
   LogGroup:
     Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: test-stack-LogGroup
 Outputs:
   LogGroup:
     Value: !Ref LogGroup

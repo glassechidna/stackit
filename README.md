@@ -1,7 +1,5 @@
 # `stackit`
 
-[![Build Status](https://travis-ci.org/glassechidna/stackit.svg?branch=master)](https://travis-ci.org/glassechidna/stackit)
-
 `stackit` is a CLI tool to synchronously and idempotently operate on AWS
 CloudFormation stacks - a perfect complement for continuous integration systems
 and developers who prefer the comfort of the command line.

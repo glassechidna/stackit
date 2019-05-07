@@ -18,10 +18,23 @@ action "not-tag" {
   args = "not tag"
 }
 
+action "short test" {
+  uses = "docker://golang:1.12"
+  args = "go test -test.short ./..."
+  needs = ["not-tag"]
+}
+
 action "test" {
   uses = "docker://golang:1.12"
   args = "go test ./..."
-  needs = ["not-tag"]
+  env = {
+    AWS_REGION = "ap-southeast-2"
+  }
+  secrets = [
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY"
+  ]
+  needs = ["short test"]
 }
 
 action "goreleaser" {
