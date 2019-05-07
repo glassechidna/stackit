@@ -34,16 +34,19 @@ var tailCmd = &cobra.Command{
 		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
 
 		sess := awsSession(profile, region)
-		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess), stackName)
+		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 
-		stack, _ := sit.Describe()
+		stack, _ := sit.Describe(stackName)
 		if stack == nil || stackit.IsTerminalStatus(*stack.StackStatus) {
 			return
 		}
 
-		sit.PollStackEvents("", func(event stackit.TailStackEvent) {
+		_, err := sit.PollStackEvents(*stack.StackId, "", func(event stackit.TailStackEvent) {
 			printer.PrintTailEvent(event)
 		})
+		if err != nil {
+			panic(err)
+		}
 	},
 }
 

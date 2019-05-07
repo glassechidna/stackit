@@ -16,12 +16,10 @@ package cmd
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/fatih/color"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,19 +34,6 @@ var paramValues []string
 var previousParamValues []string
 var tags []string
 var notificationArns []string
-
-func printOrExit(tailEvent stackit.TailStackEvent, printer stackit.TailPrinter) {
-	if tailEvent.StackitError != nil {
-		if awsErr, ok := tailEvent.StackitError.(awserr.Error); ok {
-			color.New(color.FgRed).Fprintf(os.Stderr, "%s: %s\n", awsErr.Code(), awsErr.Message())
-		} else {
-			color.New(color.FgRed).Fprintln(os.Stderr, tailEvent.StackitError.Error())
-		}
-		os.Exit(1)
-	}
-
-	printer.PrintTailEvent(tailEvent)
-}
 
 var upCmd = &cobra.Command{
 	Use:   "up",
@@ -79,23 +64,35 @@ var upCmd = &cobra.Command{
 			notificationArns,
 			previousTemplate)
 
+		parsed.StackName = stackName
+
 		events := make(chan stackit.TailStackEvent)
 
 		sess := awsSession(profile, region)
-		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess), stackName)
+		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 
 		go func() {
-			err := sit.EnsureStackReady(events)
-			if err == nil {
-				sit.Up(parsed, events)
+			for tailEvent := range events {
+				printer.PrintTailEvent(tailEvent)
 			}
 		}()
 
-		for tailEvent := range events {
-			printOrExit(tailEvent, printer)
+		prepared, err := sit.Prepare(parsed, events)
+		if err != nil {
+			panic(err)
 		}
 
-		if success, _ := sit.IsSuccessfulState(); !success {
+		if prepared == nil {
+			return // no-op change set
+		}
+
+		err = sit.Execute(prepared, events)
+		if err != nil {
+			panic(err)
+		}
+
+		stackId := *prepared.Output.StackId
+		if success, _ := sit.IsSuccessfulState(stackId); !success {
 			os.Exit(1)
 		}
 

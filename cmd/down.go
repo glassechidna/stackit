@@ -36,11 +36,11 @@ var downCmd = &cobra.Command{
 		events := make(chan stackit.TailStackEvent)
 
 		sess := awsSession(profile, region)
-		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess), stackName)
-		go sit.Down(events)
+		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
+		go sit.Down(stackName, events)
 
 		for tailEvent := range events {
-			printOrExit(tailEvent, printer)
+			printer.PrintTailEvent(tailEvent)
 		}
 	},
 }

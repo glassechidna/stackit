@@ -8,32 +8,26 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/pkg/errors"
+	"io"
 	"log"
 )
 
 type Stackit struct {
 	api       cloudformationiface.CloudFormationAPI
 	stsApi    stsiface.STSAPI
-	stackName string
-	stackId   string
 }
 
-func NewStackit(api cloudformationiface.CloudFormationAPI, stsApi stsiface.STSAPI, stackName string) *Stackit {
-	return &Stackit{api: api, stsApi: stsApi, stackName: stackName}
+func NewStackit(api cloudformationiface.CloudFormationAPI, stsApi stsiface.STSAPI) *Stackit {
+	return &Stackit{api: api, stsApi: stsApi}
 }
 
-func (s *Stackit) Describe() (*cloudformation.Stack, error) {
-	stackName := s.stackId
-	if len(stackName) == 0 {
-		stackName = s.stackName
-	}
-
+func (s *Stackit) Describe(stackName string) (*cloudformation.Stack, error) {
 	resp, err := s.api.DescribeStacks(&cloudformation.DescribeStacksInput{StackName: &stackName})
 	if err != nil {
 		if awsErr, ok := err.(awserr.Error); ok {
 			code := awsErr.Code()
 			if code == "ThrottlingException" {
-				return s.Describe()
+				return s.Describe(stackName)
 			} else if code == "ValidationError" {
 				return nil, nil
 			}
@@ -42,17 +36,11 @@ func (s *Stackit) Describe() (*cloudformation.Stack, error) {
 	}
 
 	stack := resp.Stacks[0]
-	s.stackId = *stack.StackId
 	return stack, nil
 }
 
-func (s *Stackit) error(err error, events chan<- TailStackEvent) {
-	events <- TailStackEvent{StackitError: err}
-	close(events)
-}
-
-func (s *Stackit) PrintOutputs(writer io.Writer) {
-	stack, err := s.Describe()
+func (s *Stackit) PrintOutputs(stackName string, writer io.Writer) {
+	stack, err := s.Describe(stackName)
 
 	if err != nil {
 		log.Fatal(err.Error())
@@ -68,8 +56,8 @@ func (s *Stackit) PrintOutputs(writer io.Writer) {
 	fmt.Fprintln(writer, string(bytes))
 }
 
-func (s *Stackit) IsSuccessfulState() (bool, error) {
-	stack, err := s.Describe()
+func (s *Stackit) IsSuccessfulState(stackName string) (bool, error) {
+	stack, err := s.Describe(stackName)
 	if err != nil {
 		return false, errors.Wrap(err, "determining stack status")
 	}

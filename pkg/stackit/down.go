@@ -5,49 +5,63 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Stackit) Down(events chan<- TailStackEvent) {
-	stack, err := s.Describe()
+func (s *Stackit) Down(stackName string, events chan<- TailStackEvent) error {
+	stack, err := s.Describe(stackName)
 
 	if stack != nil { // stack exists
 		token := generateToken()
 
 		input := &cloudformation.DeleteStackInput{
-			StackName:          &s.stackId,
+			StackName:          stack.StackId,
 			ClientRequestToken: &token,
 		}
 		_, err = s.api.DeleteStack(input)
 		if err != nil {
-			s.error(errors.Wrap(err, "deleting stack"), events)
-			return
+			close(events)
+			return err
 		}
 
-		finalEvent := s.PollStackEvents(token, func(event TailStackEvent) {
+		finalEvent, err := s.PollStackEvents(*stack.StackId, token, func(event TailStackEvent) {
 			events <- event
 		})
+		if err != nil {
+			close(events)
+			return err
+		}
 
 		if *finalEvent.ResourceStatus == cloudformation.ResourceStatusDeleteFailed {
 			token = generateToken()
 			input.ClientRequestToken = &token
-			input.RetainResources = s.resourcesToBeRetainedDuringDelete(events)
-			_, err = s.api.DeleteStack(input)
+			input.RetainResources, err = s.resourcesToBeRetainedDuringDelete(*stack.StackId, events)
 			if err != nil {
-				s.error(errors.Wrap(err, "deleting stack"), events)
-				return
+				close(events)
+				return errors.Wrap(err, "determining resources to be kept")
 			}
 
-			s.PollStackEvents(token, func(event TailStackEvent) {
+			_, err = s.api.DeleteStack(input)
+			if err != nil {
+				close(events)
+				return errors.Wrap(err, "deleting stack")
+			}
+
+			_, err = s.PollStackEvents(*stack.StackId, token, func(event TailStackEvent) {
 				events <- event
 			})
+			if err != nil {
+				close(events)
+				return errors.Wrap(err, "deleting stack")
+			}
 		}
 	}
 
 	close(events)
+	return nil
 }
 
-func (s *Stackit) resourcesToBeRetainedDuringDelete(events chan<- TailStackEvent) []*string {
+func (s *Stackit) resourcesToBeRetainedDuringDelete(stackName string, events chan<- TailStackEvent) ([]*string, error) {
 	names := []*string{}
 
-	err := s.api.ListStackResourcesPages(&cloudformation.ListStackResourcesInput{StackName: &s.stackId}, func(page *cloudformation.ListStackResourcesOutput, lastPage bool) bool {
+	err := s.api.ListStackResourcesPages(&cloudformation.ListStackResourcesInput{StackName: &stackName}, func(page *cloudformation.ListStackResourcesOutput, lastPage bool) bool {
 		for _, resource := range page.StackResourceSummaries {
 			if *resource.ResourceStatus == cloudformation.ResourceStatusDeleteFailed {
 				names = append(names, resource.LogicalResourceId)
@@ -56,9 +70,9 @@ func (s *Stackit) resourcesToBeRetainedDuringDelete(events chan<- TailStackEvent
 		return !lastPage
 	})
 	if err != nil {
-		s.error(errors.Wrap(err, "listing stack resources"), events)
-		return nil
+		close(events)
+		return nil, err
 	}
 
-	return names
+	return names, nil
 }

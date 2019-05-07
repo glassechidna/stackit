@@ -17,9 +17,11 @@ func (s *Stackit) Transform(template string, paramMap map[string]string) (*strin
 		})
 	}
 
+	stackName := fmt.Sprintf("stackit-temp-%d", time.Now().Unix())
+
 	createResp, err := s.api.CreateChangeSet(&cloudformation.CreateChangeSetInput{
 		ChangeSetName: aws.String(fmt.Sprintf("csid-%d", time.Now().Unix())),
-		StackName:     &s.stackName,
+		StackName:     &stackName,
 		Capabilities:  aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
 		TemplateBody:  &template,
 		ChangeSetType: aws.String(cloudformation.ChangeSetTypeCreate),
@@ -42,8 +44,12 @@ func (s *Stackit) Transform(template string, paramMap map[string]string) (*strin
 		return nil, errors.Wrap(err, "getting template body")
 	}
 
-	s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &s.stackName})
-	return getResp.TemplateBody, nil
+	_, err = s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &stackName})
+	if err != nil {
+		return nil, errors.Wrap(err, "deleting temporary stack")
+	}
+
+	return getResp.TemplateBody, err
 }
 
 func (s *Stackit) waitForChangeset(id *string) (*cloudformation.DescribeChangeSetOutput, error) {

@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io/ioutil"
-	"time"
 )
 
 var transformCmd = &cobra.Command{
@@ -39,7 +38,6 @@ var transformCmd = &cobra.Command{
 		sit := stackit.NewStackit(
 			cloudformation.New(sess),
 			sts.New(sess),
-			fmt.Sprintf("stackit-temp-%d", time.Now().Unix()),
 		)
 
 		original, err := ioutil.ReadFile(templatePath)

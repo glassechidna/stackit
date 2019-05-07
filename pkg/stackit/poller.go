@@ -8,10 +8,9 @@ import (
 
 type TailStackEvent struct {
 	cloudformation.StackEvent
-	StackitError error
 }
 
-func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEvent)) TailStackEvent {
+func (s *Stackit) PollStackEvents(stackId, token string, callback func(event TailStackEvent)) (*TailStackEvent, error) {
 	lastSentEventId := ""
 
 	for {
@@ -20,7 +19,7 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 		events := []*cloudformation.StackEvent{}
 
 		err := s.api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
-			StackName: &s.stackId,
+			StackName: &stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 			for _, event := range page.StackEvents {
 				crt := "nil"
@@ -48,9 +47,7 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 					continue
 				}
 			}
-			event := TailStackEvent{cloudformation.StackEvent{}, err}
-			callback(event)
-			return event
+			return nil, err
 		}
 
 		if len(events) == 0 {
@@ -58,21 +55,19 @@ func (s *Stackit) PollStackEvents(token string, callback func(event TailStackEve
 		}
 
 		lastSentEventId = *events[0].EventId
-		stack, err := s.Describe()
+		stack, err := s.Describe(*events[0].StackId)
 		if err != nil {
-			event := TailStackEvent{cloudformation.StackEvent{}, err}
-			callback(event)
-			return event
+			return nil, err
 		}
 		terminal := IsTerminalStatus(*stack.StackStatus)
 
 		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
 			event := events[ev_i]
-			tailEvent := TailStackEvent{*event, nil}
+			tailEvent := TailStackEvent{*event}
 
 			done := terminal && ev_i == 0
 			if done {
-				return tailEvent
+				return &tailEvent, nil
 			}
 
 			callback(tailEvent)
