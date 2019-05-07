@@ -3,6 +3,7 @@ package stackit
 import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/stretchr/testify/assert"
@@ -66,13 +67,16 @@ func TestServiceRoleArnDoesntTriggerStsCall(t *testing.T) {
 	}
 
 	capi.DescribeStacksF = func(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
-		return &cloudformation.DescribeStacksOutput{
-			Stacks: []*cloudformation.Stack{
-				{
-					StackId: aws.String("arn:aws:cloudformation:ap-southeast-2:657110686698:stack/stack-name/58ed6a10-3e2f-11e9-bc5f-0a9966e9c45e"),
+		capi.DescribeStacksF = func(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+			return &cloudformation.DescribeStacksOutput{
+				Stacks: []*cloudformation.Stack{
+					{
+						StackId: aws.String("arn:aws:cloudformation:ap-southeast-2:657110686698:stack/stackset-role/58ed6a10-3e2f-11e9-bc5f-0a9966e9c45e"),
+					},
 				},
-			},
-		}, nil
+			}, nil
+		}
+		return nil, awserr.New("ValidationError", "", nil)
 	}
 
 	ch := make(chan TailStackEvent)
