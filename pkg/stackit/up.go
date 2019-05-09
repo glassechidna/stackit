@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"strings"
 	"time"
@@ -183,15 +184,19 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 	}
 
 	change, err := s.waitForChangeset(resp.Id)
-	if err != nil {
-		return nil, errors.Wrap(err, "waiting for changeset to stabilise")
-	}
 
 	isNoop := change != nil && len(change.Changes) == 0
 	if isNoop { // update is a no-op, nothing to change
 		_, err = s.api.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
 		return nil, errors.Wrap(err, "waiting for no-op changeset to delete")
 	}
+
+	if err != nil {
+		spew.Dump(err)
+		return nil, errors.Wrap(err, "waiting for changeset to stabilise")
+	}
+
+
 
 	getResp, err := s.api.GetTemplate(&cloudformation.GetTemplateInput{
 		ChangeSetName: resp.Id,
