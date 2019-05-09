@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 )
@@ -195,7 +196,11 @@ func awsSession(profile, region string) *session.Session {
 	}
 
 	if len(os.Getenv("STACKIT_AWS_VERBOSE")) > 0 {
+		logger := log.New(os.Stderr, "", log.LstdFlags)
 		sessOpts.Config.LogLevel = aws.LogLevel(aws.LogDebugWithHTTPBody)
+		sessOpts.Config.Logger = aws.LoggerFunc(func(args ...interface{}) {
+			logger.Println(args...)
+		})
 	}
 
 	userAgentHandler := request.NamedHandler{
