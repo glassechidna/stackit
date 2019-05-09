@@ -40,3 +40,19 @@ Parameters:`
 	output := extractTemplateFromCliStdout(input)
 	assert.Equal(t, expected, output)
 }
+
+func TestExtractTemplateFromCliStdout_WithLeadingWhitespace(t *testing.T) {
+	input := []byte(`
+Uploading to mtdtest/bce72dc454d3a126d60cd2ef6857ce62  2919617 / 2919617.0  (100.00%)
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:`)
+
+	expected := `AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:`
+
+	output := extractTemplateFromCliStdout(input)
+	assert.Equal(t, expected, output)
+}
+

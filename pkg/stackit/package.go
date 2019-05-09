@@ -83,7 +83,7 @@ func (p *Packager) Package(stackName, templatePath string, tags, parameters map[
 }
 
 func extractTemplateFromCliStdout(input []byte) string {
-	lines := strings.Split(string(input), "\n")
+	lines := strings.Split(strings.TrimSpace(string(input)), "\n")
 	idx := 0
 	for idx < len(lines) {
 		if !strings.HasPrefix(lines[idx], "Uploading") {
