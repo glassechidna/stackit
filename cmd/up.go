@@ -17,6 +17,7 @@ package cmd
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -197,7 +198,14 @@ func awsSession(profile, region string) *session.Session {
 		sessOpts.Config.LogLevel = aws.LogLevel(aws.LogDebugWithHTTPBody)
 	}
 
+	userAgentHandler := request.NamedHandler{
+		Name: "stackit.UserAgentHandler",
+		Fn:   request.MakeAddToUserAgentHandler("stackit", version),
+	}
+
 	sess, _ := session.NewSessionWithOptions(sessOpts)
+	sess.Handlers.Build.PushFrontNamed(userAgentHandler)
+
 	return sess
 }
 
