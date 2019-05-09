@@ -5,3 +5,5 @@ RUN pip install awscli
 WORKDIR /wd
 COPY go.mod go.sum ./
 RUN go mod download
+
+ENV CGO_ENABLED=0
