@@ -24,6 +24,7 @@ action "test" {
   args = "go test ./..."
   env = {
     AWS_REGION = "ap-southeast-2"
+    STACKIT_AWS_VERBOSE = "true"
   }
   secrets = [
     "AWS_ACCESS_KEY_ID",
