@@ -17,7 +17,7 @@ func TestServiceRoleArnCanBeName(t *testing.T) {
 
 	input := StackitUpInput{
 		StackName: "stack-name",
-		RoleARN: "MyRoleName",
+		RoleARN:   "MyRoleName",
 	}
 
 	sapi.GetCallerIdentityF = func(input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
@@ -56,7 +56,7 @@ func TestServiceRoleArnDoesntTriggerStsCall(t *testing.T) {
 
 	input := StackitUpInput{
 		StackName: "stack-name",
-		RoleARN: "arn:aws:iam::1234567890:role/MyRoleName",
+		RoleARN:   "arn:aws:iam::1234567890:role/MyRoleName",
 	}
 
 	sapi.GetCallerIdentityF = func(input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {

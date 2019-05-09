@@ -193,7 +193,6 @@ func awsSession(profile, region string) *session.Session {
 		sessOpts.Config.Region = aws.String(region)
 	}
 
-
 	if len(os.Getenv("STACKIT_AWS_VERBOSE")) > 0 {
 		sessOpts.Config.LogLevel = aws.LogLevel(aws.LogDebugWithHTTPBody)
 	}

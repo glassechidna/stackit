@@ -18,6 +18,17 @@ Resources:
                   - elasticloadbalancing:*
                   - ec2:Describe*
                 Resource: "*"
+              - Effect: Allow
+                Action: s3:*
+                Resource:
+                  - !Sub arn:aws:s3:::stackit-*
+                  - !Sub arn:aws:s3:::stackit-*/*
+              - Effect: Allow
+                Action: iam:*
+                Resource: arn:aws:iam::*:role/test-stack-*
+              - Effect: Allow
+                Action: lambda:*
+                Resource: arn:aws:lambda:*:*:function:test-stack-*
 Outputs:
   GithubActionsUser:
     Value: !Ref GithubActionsUser

@@ -1,11 +1,11 @@
 package stackit
 
 import (
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/aws"
 	"fmt"
-	"time"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/pkg/errors"
+	"time"
 )
 
 func (s *Stackit) Transform(template string, paramMap map[string]string) (*string, error) {

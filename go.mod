@@ -11,7 +11,9 @@ require (
 	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
+	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
+	github.com/olekukonko/tablewriter v0.0.1
 	github.com/pkg/errors v0.8.0
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.3
@@ -21,4 +23,5 @@ require (
 	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a // indirect
 	golang.org/x/sys v0.0.0-20181122145206-62eef0e2fa9b // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/yaml.v2 v2.2.1
 )

@@ -9,10 +9,9 @@ import (
 
 type cfnApi struct {
 	cloudformationiface.CloudFormationAPI
-	CreateChangeSetF func(input *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
+	CreateChangeSetF          func(input *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
 	DescribeStackEventsPagesF func(*cloudformation.DescribeStackEventsInput, func(*cloudformation.DescribeStackEventsOutput, bool) bool) error
-	DescribeStacksF func (*cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
-
+	DescribeStacksF           func(*cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 }
 
 func (c *cfnApi) DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {

@@ -13,8 +13,8 @@ import (
 )
 
 type Stackit struct {
-	api       cloudformationiface.CloudFormationAPI
-	stsApi    stsiface.STSAPI
+	api    cloudformationiface.CloudFormationAPI
+	stsApi stsiface.STSAPI
 }
 
 func NewStackit(api cloudformationiface.CloudFormationAPI, stsApi stsiface.STSAPI) *Stackit {
