@@ -55,4 +55,3 @@ Parameters:`
 	output := extractTemplateFromCliStdout(input)
 	assert.Equal(t, expected, output)
 }
-

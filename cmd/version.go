@@ -22,7 +22,6 @@ import (
 // these are set by goreleaser
 var version, commit, date string
 
-
 func init() {
 	cmd := &cobra.Command{
 		Use:   "version",

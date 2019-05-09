@@ -198,8 +198,6 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 		return nil, errors.Wrap(err, "waiting for changeset to stabilise")
 	}
 
-
-
 	getResp, err := s.api.GetTemplate(&cloudformation.GetTemplateInput{
 		ChangeSetName: resp.Id,
 		StackName:     resp.StackId,

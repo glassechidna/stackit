@@ -41,4 +41,3 @@ func awsSession(profile, region string) *session.Session {
 
 	return sess
 }
-
