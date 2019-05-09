@@ -42,18 +42,13 @@ type UploadedObject struct {
 }
 
 func (p *Packager) Package(stackName, templatePath string, tags, parameters map[string]string) (*StackitUpInput, error) {
-	absPath, err := filepath.Abs(templatePath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "determining absolute path of '%s'", templatePath)
-	}
-
 	bucket, err := p.s3BucketName()
 	if err != nil {
 		return nil, err
 	}
 
 	prefix := stackName
-	cliArgs := []string{"aws", "cloudformation", "package", "--template-file", absPath, "--s3-bucket", bucket, "--s3-prefix", prefix}
+	cliArgs := []string{"aws", "cloudformation", "package", "--template-file", templatePath, "--s3-bucket", bucket, "--s3-prefix", prefix}
 	cmd := exec.Command(cliArgs[0], cliArgs[1:]...)
 
 	output, err := cmd.CombinedOutput()

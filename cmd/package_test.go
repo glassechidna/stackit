@@ -11,6 +11,20 @@ import (
 	"testing"
 )
 
+func TestUsefulErrorIfTemplateDoesntExist(t *testing.T) {
+	buf := &bytes.Buffer{}
+	RootCmd.SetOutput(buf)
+
+	RootCmd.SetArgs([]string{
+		"package",
+		"--stack-name", "some-stack-name",
+		"--template", "doesnt-exist.yml",
+	})
+
+	RootCmd.Execute()
+	assert.Regexp(t, regexp.MustCompile(`^no file exists at`), buf.String())
+}
+
 func TestChangeSetFormatting(t *testing.T) {
 	ymlBody := `
 input:

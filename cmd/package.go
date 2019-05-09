@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -24,11 +25,21 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
 
 func packageTemplate(region, profile, stackName, templatePath string, tags, parameters map[string]string, writer io.Writer) error {
+	absPath, err := filepath.Abs(templatePath)
+	if err != nil {
+		return errors.Wrapf(err, "determining absolute path of '%s'", templatePath)
+	}
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return errors.Errorf("no file exists at %s", absPath)
+	}
+
 	sess := awsSession(profile, region)
 	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 	packager := stackit.NewPackager(s3.New(sess), sts.New(sess), region)
@@ -42,7 +53,7 @@ func packageTemplate(region, profile, stackName, templatePath string, tags, para
 		}
 	}()
 
-	upInput, err := packager.Package(stackName, templatePath, tags, parameters)
+	upInput, err := packager.Package(stackName, absPath, tags, parameters)
 	if err != nil {
 		return errors.Wrap(err, "packaging template")
 	}
@@ -119,7 +130,7 @@ package will:
 
 			err := packageTemplate(region, profile, stackName, templatePath, tags, params, cmd.OutOrStderr())
 			if err != nil {
-				panic(err)
+				fmt.Fprintf(cmd.OutOrStderr(), "%+v\n", err)
 			}
 		},
 	}
