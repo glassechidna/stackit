@@ -76,18 +76,20 @@ func (s *Stackit) ensureStackReady(stackName string, events chan<- TailStackEven
 			return err
 		}
 
-		s.PollStackEvents(stackId, token, func(event TailStackEvent) {
+		_, err = s.PollStackEvents(stackId, token, func(event TailStackEvent) {
 			events <- event
 		})
-
-		return nil
+		return err
 	}
 
 	if stack != nil { // stack already exists
 		if !IsTerminalStatus(*stack.StackStatus) && *stack.StackStatus != "REVIEW_IN_PROGRESS" {
-			s.PollStackEvents(*stack.StackId, "", func(event TailStackEvent) {
+			_, err = s.PollStackEvents(*stack.StackId, "", func(event TailStackEvent) {
 				events <- event
 			})
+			if err != nil {
+				return err
+			}
 		}
 
 		stack, err = s.Describe(*stack.StackId)
