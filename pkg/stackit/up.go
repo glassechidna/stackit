@@ -210,11 +210,11 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 	}, nil
 }
 
-func (s *Stackit) Execute(prepared *PrepareOutput, events chan<- TailStackEvent) error {
+func (s *Stackit) Execute(stackId, changeSetId string, events chan<- TailStackEvent) error {
 	token := generateToken()
 
 	_, err := s.api.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
-		ChangeSetName:      prepared.Output.Id,
+		ChangeSetName:      &changeSetId,
 		ClientRequestToken: &token,
 	})
 

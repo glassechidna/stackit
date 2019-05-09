@@ -86,7 +86,7 @@ var upCmd = &cobra.Command{
 			return // no-op change set
 		}
 
-		err = sit.Execute(prepared, events)
+		err = sit.Execute(*prepared.Output.StackId, *prepared.Output.Id, events)
 		if err != nil {
 			panic(err)
 		}
