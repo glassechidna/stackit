@@ -38,10 +38,10 @@ action "test" {
 }
 
 action "goreleaser" {
-  uses = "docker://goreleaser/goreleaser"
+  uses = "./"
   secrets = [
     "GORELEASER_GITHUB_TOKEN"
   ]
-  args = "release"
+  args = "goreleaser"
   needs = ["is-tag"]
 }
