@@ -1,5 +1,6 @@
-FROM golang:1.12
-RUN apt-get update && apt-get install -y awscli
+FROM golang:1.12-alpine
+RUN apk add --update git py2-pip
+RUN pip install awscli
 
 WORKDIR /wd
 COPY go.mod go.sum ./
