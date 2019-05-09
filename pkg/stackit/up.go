@@ -211,11 +211,11 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 }
 
 func (s *Stackit) Execute(prepared *PrepareOutput, events chan<- TailStackEvent) error {
-	token := prepared.Input.ClientToken
+	token := generateToken()
 
 	_, err := s.api.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
 		ChangeSetName:      prepared.Output.Id,
-		ClientRequestToken: token,
+		ClientRequestToken: &token,
 	})
 
 	if err != nil {
@@ -223,7 +223,7 @@ func (s *Stackit) Execute(prepared *PrepareOutput, events chan<- TailStackEvent)
 		return errors.Wrap(err, "executing change set")
 	}
 
-	_, err = s.PollStackEvents(*prepared.Output.StackId, *token, func(event TailStackEvent) {
+	_, err = s.PollStackEvents(stackId, token, func(event TailStackEvent) {
 		events <- event
 	})
 
