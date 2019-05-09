@@ -45,6 +45,7 @@ var upCmd = &cobra.Command{
 		stackPolicy := viper.GetString("stack-policy")
 		template := viper.GetString("template")
 		previousTemplate := viper.GetBool("previous-template")
+		alwaysSucceed := viper.GetBool("always-succeed")
 		//noDestroy := viper.GetBool("no-destroy")
 		//cancelOnExit := !viper.GetBool("no-cancel-on-exit")
 
@@ -90,7 +91,7 @@ var upCmd = &cobra.Command{
 		}
 
 		stackId := *prepared.Output.StackId
-		if success, _ := sit.IsSuccessfulState(stackId); !success {
+		if success, _ := sit.IsSuccessfulState(stackId); !success && !alwaysSucceed {
 			os.Exit(1)
 		}
 
@@ -192,6 +193,7 @@ func init() {
 	upCmd.PersistentFlags().Bool("no-cancel-on-exit", false, "")
 	upCmd.PersistentFlags().Bool("no-timestamps", false, "")
 	upCmd.PersistentFlags().Bool("no-color", false, "")
+	upCmd.PersistentFlags().Bool("always-succeed", false, "Typically stackit will return a nonzero exit code on failure. This disables that.")
 
 	viper.BindPFlags(upCmd.PersistentFlags())
 }

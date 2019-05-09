@@ -51,7 +51,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: test-stack-LogGroup
+      LogGroupName: !Sub ${AWS::StackName}-LogGroup
 Outputs:
   LogGroup:
     Value: !Ref LogGroup

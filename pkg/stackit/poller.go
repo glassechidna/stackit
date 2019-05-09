@@ -11,7 +11,8 @@ type TailStackEvent struct {
 }
 
 func (s *Stackit) PollStackEvents(stackId, token string, callback func(event TailStackEvent)) (*TailStackEvent, error) {
-	lastSentEventId := ""
+	mostRecentEventTimestamp := time.Now().AddDate(0, 0, -1)
+	haveSeenExpectedToken := false
 
 	for {
 		time.Sleep(3 * time.Second)
@@ -22,55 +23,48 @@ func (s *Stackit) PollStackEvents(stackId, token string, callback func(event Tai
 			StackName: &stackId,
 		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 			for _, event := range page.StackEvents {
-				crt := "nil"
-				if event.ClientRequestToken != nil {
-					crt = *event.ClientRequestToken
+				if event.ClientRequestToken != nil && *event.ClientRequestToken == token {
+					haveSeenExpectedToken = true
 				}
 
-				if token == "" {
-					token = crt
+				if haveSeenExpectedToken && event.Timestamp.After(mostRecentEventTimestamp) {
+					events = append(events, event)
 				}
-
-				if *event.EventId == lastSentEventId || crt != token {
-					return false
-				}
-
-				events = append(events, event)
 			}
-			return true
+
+			earliestEvent := page.StackEvents[len(page.StackEvents)-1]
+			shouldPaginate := earliestEvent.Timestamp.After(mostRecentEventTimestamp)
+			mostRecentEventTimestamp = *page.StackEvents[0].Timestamp
+			return shouldPaginate
 		})
 
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
 				code := awsErr.Code()
-				if code == "ThrottlingException" {
-					continue
+				if code != "ThrottlingException" {
+					return nil, err
 				}
+			} else {
+				return nil, err
 			}
-			return nil, err
 		}
 
 		if len(events) == 0 {
 			continue
 		}
 
-		lastSentEventId = *events[0].EventId
 		stack, err := s.Describe(*events[0].StackId)
 		if err != nil {
 			return nil, err
 		}
-		terminal := IsTerminalStatus(*stack.StackStatus)
-
 		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
 			event := events[ev_i]
 			tailEvent := TailStackEvent{*event}
-
-			done := terminal && ev_i == 0
-			if done {
-				return &tailEvent, nil
-			}
-
 			callback(tailEvent)
+		}
+
+		if IsTerminalStatus(*stack.StackStatus) {
+			return &TailStackEvent{*events[0]}, nil
 		}
 	}
 }
