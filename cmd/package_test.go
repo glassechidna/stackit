@@ -72,17 +72,21 @@ Stack ID: arn:aws:cloudformation:ap-southeast-2:720884384464:stack/aidan-mtd-tes
 Change Set ID: arn:aws:cloudformation:ap-southeast-2:720884384464:changeSet/aidan-mtd-test-csid-1557355052/dc7928df-d27e-4992-a350-9ee4ba357999
 Changes:
 
-\+--------\+-----------------------\+
++--------+-----------------------+
 | ACTION |       RESOURCE        |
-\+--------\+-----------------------\+
++--------+-----------------------+
 | Add    | Cell                  |
 | Add    | CodeDeployServiceRole |
-\+--------\+-----------------------\+
++--------+-----------------------+
 `
 	assert.Equal(t, expected, userFriendlyChangesOutput(&input))
 }
 
 func TestPackageAndExecuteE2E(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skip e2e tests in short mode")
+	}
+
 	buf := &bytes.Buffer{}
 	out := io.MultiWriter(buf, os.Stderr)
 	RootCmd.SetOutput(out)
