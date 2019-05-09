@@ -121,6 +121,7 @@ func (s *Stackit) awsAccountId() (string, error) {
 type PrepareOutput struct {
 	Input        *cloudformation.CreateChangeSetInput
 	Output       *cloudformation.CreateChangeSetOutput
+	Changes      []*cloudformation.Change
 	TemplateBody string
 }
 
@@ -204,6 +205,7 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 	return &PrepareOutput{
 		Input:        createInput,
 		Output:       resp,
+		Changes:      change.Changes,
 		TemplateBody: *getResp.TemplateBody,
 	}, nil
 }
