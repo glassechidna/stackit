@@ -1,8 +1,3 @@
-workflow "Release" {
-  on = "push"
-  resolves = ["goreleaser"]
-}
-
 workflow "CI" {
   on = "push"
   resolves = ["test"]
@@ -19,13 +14,13 @@ action "not-tag" {
 }
 
 action "short test" {
-  uses = "docker://golang:1.12"
+  uses = "./"
   args = "go test -test.short ./..."
   needs = ["not-tag"]
 }
 
 action "test" {
-  uses = "docker://golang:1.12"
+  uses = "./"
   args = "go test ./..."
   env = {
     AWS_REGION = "ap-southeast-2"
