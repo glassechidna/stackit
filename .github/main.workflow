@@ -42,6 +42,6 @@ action "goreleaser" {
   secrets = [
     "GORELEASER_GITHUB_TOKEN"
   ]
-  args = "goreleaser"
+  args = ["sh", "-c", "GITHUB_TOKEN=$GORELEASER_GITHUB_TOKEN goreleaser"]
   needs = ["is-tag"]
 }
