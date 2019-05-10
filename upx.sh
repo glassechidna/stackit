@@ -1,4 +1,5 @@
 #!/bin/sh
 set -ex
 
-upx dist/**/*
+# no-op while upx in alpine appears to be broken
+#upx dist/**/*
