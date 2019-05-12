@@ -46,7 +46,6 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 	_ = RootCmd.Execute()
 
 	assert.Matches(t, buf.String(), strings.TrimSpace(`
-\[\d\d:\d\d:\d\d] test-cancelled-stack - REVIEW_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d] test-cancelled-stack - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
@@ -64,11 +63,12 @@ func TestUp(t *testing.T) {
 		t.Skip("skip e2e tests in short mode")
 	}
 
-	t.Run("up", func(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
 		RootCmd.SetArgs([]string{
 			"up",
 			"--stack-name", "test-stack",
 			"--template", "../sample/sample.yml",
+			"--param-value", "HealthCheckPath=/pinga",
 		})
 
 		buf := &bytes.Buffer{}
@@ -78,7 +78,7 @@ func TestUp(t *testing.T) {
 		_ = RootCmd.Execute()
 
 		assert.Matches(t, buf.String(), strings.TrimSpace(`
-\[\d\d:\d\d:\d\d]           test-stack - CREATE_IN_PROGRESS - User Initiated
+^\[\d\d:\d\d:\d\d]           test-stack - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_COMPLETE 
@@ -88,6 +88,34 @@ func TestUp(t *testing.T) {
 \[\d\d:\d\d:\d\d]          TargetGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]          TargetGroup - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]          TargetGroup - CREATE_COMPLETE 
+\[\d\d:\d\d:\d\d]           test-stack - CREATE_COMPLETE 
+\{
+  "LogGroup": "test-stack-LogGroup",
+  "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:\d+"
+\}
+`))
+	})
+
+	t.Run("update", func(t *testing.T) {
+		RootCmd.SetArgs([]string{
+			"up",
+			"--stack-name", "test-stack",
+			"--template", "../sample/sample.yml",
+			"--param-value", "HealthCheckPath=/pingb",
+		})
+
+		buf := &bytes.Buffer{}
+		out := io.MultiWriter(buf, os.Stderr)
+		RootCmd.SetOutput(out)
+
+		_ = RootCmd.Execute()
+
+		assert.Matches(t, buf.String(), strings.TrimSpace(`
+^\[\d\d:\d\d:\d\d]           test-stack - UPDATE_IN_PROGRESS - User Initiated
+\[\d\d:\d\d:\d\d]          TargetGroup - UPDATE_IN_PROGRESS 
+\[\d\d:\d\d:\d\d]          TargetGroup - UPDATE_COMPLETE 
+\[\d\d:\d\d:\d\d]           test-stack - UPDATE_COMPLETE_CLEANUP_IN_PROGRESS 
+\[\d\d:\d\d:\d\d]           test-stack - UPDATE_COMPLETE 
 \{
   "LogGroup": "test-stack-LogGroup",
   "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:\d+"
@@ -108,7 +136,7 @@ func TestUp(t *testing.T) {
 		_ = RootCmd.Execute()
 
 		assert.Matches(t, buf.String(), strings.TrimSpace(`
-\[\d\d:\d\d:\d\d]           test-stack - DELETE_IN_PROGRESS - User Initiated
+^\[\d\d:\d\d:\d\d]           test-stack - DELETE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]          TargetGroup - DELETE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]          TargetGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d]              TaskDef - DELETE_IN_PROGRESS 

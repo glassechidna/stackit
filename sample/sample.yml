@@ -3,9 +3,8 @@ Parameters:
   DockerImage:
     Type: String
     Default: nginx
-  Cluster:
+  HealthCheckPath:
     Type: String
-    Default: default
   VpcId:
     Type: AWS::EC2::VPC::Id
     Default: vpc-8d2005e8
@@ -44,7 +43,7 @@ Resources:
     Properties:
       HealthCheckIntervalSeconds: 60
       UnhealthyThresholdCount: 10
-      HealthCheckPath: /ping
+      HealthCheckPath: !Ref HealthCheckPath
       Port: 1234 # unused
       Protocol: HTTP
       VpcId: !Ref VpcId

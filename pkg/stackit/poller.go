@@ -3,6 +3,7 @@ package stackit
 import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"time"
 )
 
@@ -10,33 +11,43 @@ type TailStackEvent struct {
 	cloudformation.StackEvent
 }
 
+func eventsWhile(api cloudformationiface.CloudFormationAPI, stackId string, include func(event *cloudformation.StackEvent) bool) ([]*cloudformation.StackEvent, error) {
+	var events []*cloudformation.StackEvent
+
+	err := api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
+		StackName: &stackId,
+	}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
+		for _, event := range page.StackEvents {
+			if !include(event) {
+				return false
+			}
+
+			events = append(events, event)
+		}
+
+		return true
+	})
+
+	return events, err
+}
+
 func (s *Stackit) PollStackEvents(stackId, token string, callback func(event TailStackEvent)) (*TailStackEvent, error) {
-	mostRecentEventTimestamp := time.Now().AddDate(0, 0, -1)
-	haveSeenExpectedToken := false
+	var mostRecent *time.Time
 
 	for {
 		time.Sleep(3 * time.Second)
 
-		events := []*cloudformation.StackEvent{}
-
-		err := s.api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
-			StackName: &stackId,
-		}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
-			for _, event := range page.StackEvents {
-				if event.ClientRequestToken != nil && *event.ClientRequestToken == token {
-					haveSeenExpectedToken = true
-				}
-
-				if haveSeenExpectedToken && event.Timestamp.After(mostRecentEventTimestamp) {
-					events = append(events, event)
-				}
-			}
-
-			earliestEvent := page.StackEvents[len(page.StackEvents)-1]
-			shouldPaginate := earliestEvent.Timestamp.After(mostRecentEventTimestamp)
-			mostRecentEventTimestamp = *page.StackEvents[0].Timestamp
-			return shouldPaginate
-		})
+		var events []*cloudformation.StackEvent
+		var err error
+		if mostRecent == nil {
+			events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+				return event.ClientRequestToken != nil && *event.ClientRequestToken == token
+			})
+		} else {
+			events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+				return event.Timestamp.After(*mostRecent)
+			})
+		}
 
 		if err != nil {
 			if awsErr, ok := err.(awserr.Error); ok {
@@ -52,6 +63,8 @@ func (s *Stackit) PollStackEvents(stackId, token string, callback func(event Tai
 		if len(events) == 0 {
 			continue
 		}
+
+		mostRecent = events[0].Timestamp
 
 		stack, err := s.Describe(*events[0].StackId)
 		if err != nil {
