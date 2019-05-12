@@ -5,9 +5,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -47,8 +48,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 
 	_ = RootCmd.Execute()
 
-	assert.Matches(t, buf.String(), strings.TrimSpace(`
-\[\d\d:\d\d:\d\d] test-cancelled-stack - CREATE_IN_PROGRESS - User Initiated
+	assert.Regexp(t, regexp.MustCompile(`^\[\d\d:\d\d:\d\d] test-cancelled-stack - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_COMPLETE 
@@ -57,7 +57,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d] test-cancelled-stack - DELETE_COMPLETE 
 \{\}
-`))
+`), buf.String())
 }
 
 func TestUp(t *testing.T) {
@@ -79,8 +79,7 @@ func TestUp(t *testing.T) {
 
 		_ = RootCmd.Execute()
 
-		assert.Matches(t, buf.String(), strings.TrimSpace(`
-^\[\d\d:\d\d:\d\d]           test-stack - CREATE_IN_PROGRESS - User Initiated
+		assert.Regexp(t, regexp.MustCompile(`^\[\d\d:\d\d:\d\d]           test-stack - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_COMPLETE 
@@ -95,7 +94,7 @@ func TestUp(t *testing.T) {
   "LogGroup": "test-stack-LogGroup",
   "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:\d+"
 \}
-`))
+`), buf.String())
 	})
 
 	t.Run("update", func(t *testing.T) {
@@ -112,8 +111,7 @@ func TestUp(t *testing.T) {
 
 		_ = RootCmd.Execute()
 
-		assert.Matches(t, buf.String(), strings.TrimSpace(`
-^\[\d\d:\d\d:\d\d]           test-stack - UPDATE_IN_PROGRESS - User Initiated
+		assert.Regexp(t, regexp.MustCompile(`^\[\d\d:\d\d:\d\d]           test-stack - UPDATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]          TargetGroup - UPDATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]          TargetGroup - UPDATE_COMPLETE 
 \[\d\d:\d\d:\d\d]           test-stack - UPDATE_COMPLETE_CLEANUP_IN_PROGRESS 
@@ -122,7 +120,7 @@ func TestUp(t *testing.T) {
   "LogGroup": "test-stack-LogGroup",
   "TaskDef": "arn:aws:ecs:ap-southeast-2:607481581596:task-definition/ecs-run-task-test:\d+"
 \}
-`))
+`), buf.String())
 	})
 
 	t.Run("down", func(t *testing.T) {
@@ -137,15 +135,13 @@ func TestUp(t *testing.T) {
 
 		_ = RootCmd.Execute()
 
-		assert.Matches(t, buf.String(), strings.TrimSpace(`
-^\[\d\d:\d\d:\d\d]           test-stack - DELETE_IN_PROGRESS - User Initiated
+		assert.Regexp(t, regexp.MustCompile(`^\[\d\d:\d\d:\d\d]           test-stack - DELETE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]          TargetGroup - DELETE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]          TargetGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d]              TaskDef - DELETE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]              TaskDef - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_IN_PROGRESS 
-\[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE
-`))
+\[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE`), buf.String())
 	})
 
 }
