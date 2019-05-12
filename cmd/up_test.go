@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/magiconair/properties/assert"
@@ -35,7 +36,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 			time.Sleep(time.Second)
 		}
 
-		sess := session.Must(session.NewSession())
+		sess := session.Must(session.NewSession(aws.NewConfig().WithRegion("ap-southeast-2")))
 		cfn := cloudformation.New(sess)
 		input := &cloudformation.DeleteStackInput{StackName: &stackName}
 		_, err := cfn.DeleteStack(input)

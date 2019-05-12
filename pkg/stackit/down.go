@@ -1,11 +1,12 @@
 package stackit
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/pkg/errors"
 )
 
-func (s *Stackit) Down(stackName string, events chan<- TailStackEvent) error {
+func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- TailStackEvent) error {
 	stack, err := s.Describe(stackName)
 
 	if stack != nil { // stack exists
@@ -21,7 +22,7 @@ func (s *Stackit) Down(stackName string, events chan<- TailStackEvent) error {
 			return err
 		}
 
-		finalEvent, err := s.PollStackEvents(*stack.StackId, token, func(event TailStackEvent) {
+		finalEvent, err := s.PollStackEvents(ctx, *stack.StackId, token, func(event TailStackEvent) {
 			events <- event
 		})
 		if err != nil {
@@ -44,7 +45,7 @@ func (s *Stackit) Down(stackName string, events chan<- TailStackEvent) error {
 				return errors.Wrap(err, "deleting stack")
 			}
 
-			_, err = s.PollStackEvents(*stack.StackId, token, func(event TailStackEvent) {
+			_, err = s.PollStackEvents(ctx, *stack.StackId, token, func(event TailStackEvent) {
 				events <- event
 			})
 			if err != nil {

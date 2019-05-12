@@ -1,6 +1,7 @@
 package stackit
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -31,53 +32,57 @@ func eventsWhile(api cloudformationiface.CloudFormationAPI, stackId string, incl
 	return events, err
 }
 
-func (s *Stackit) PollStackEvents(stackId, token string, callback func(event TailStackEvent)) (*TailStackEvent, error) {
+func (s *Stackit) PollStackEvents(ctx context.Context, stackId, token string, callback func(event TailStackEvent)) (*TailStackEvent, error) {
 	var mostRecent *time.Time
+	tick := time.NewTicker(3 * time.Second)
 
 	for {
-		time.Sleep(3 * time.Second)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-tick.C:
+			var events []*cloudformation.StackEvent
+			var err error
+			if mostRecent == nil {
+				events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+					return event.ClientRequestToken != nil && *event.ClientRequestToken == token
+				})
+			} else {
+				events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+					return event.Timestamp.After(*mostRecent)
+				})
+			}
 
-		var events []*cloudformation.StackEvent
-		var err error
-		if mostRecent == nil {
-			events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
-				return event.ClientRequestToken != nil && *event.ClientRequestToken == token
-			})
-		} else {
-			events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
-				return event.Timestamp.After(*mostRecent)
-			})
-		}
-
-		if err != nil {
-			if awsErr, ok := err.(awserr.Error); ok {
-				code := awsErr.Code()
-				if code != "ThrottlingException" {
+			if err != nil {
+				if awsErr, ok := err.(awserr.Error); ok {
+					code := awsErr.Code()
+					if code != "ThrottlingException" {
+						return nil, err
+					}
+				} else {
 					return nil, err
 				}
-			} else {
+			}
+
+			if len(events) == 0 {
+				continue
+			}
+
+			mostRecent = events[0].Timestamp
+
+			stack, err := s.Describe(*events[0].StackId)
+			if err != nil {
 				return nil, err
 			}
-		}
+			for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
+				event := events[ev_i]
+				tailEvent := TailStackEvent{*event}
+				callback(tailEvent)
+			}
 
-		if len(events) == 0 {
-			continue
-		}
-
-		mostRecent = events[0].Timestamp
-
-		stack, err := s.Describe(*events[0].StackId)
-		if err != nil {
-			return nil, err
-		}
-		for ev_i := len(events) - 1; ev_i >= 0; ev_i-- {
-			event := events[ev_i]
-			tailEvent := TailStackEvent{*event}
-			callback(tailEvent)
-		}
-
-		if IsTerminalStatus(*stack.StackStatus) {
-			return &TailStackEvent{*events[0]}, nil
+			if IsTerminalStatus(*stack.StackStatus) {
+				return &TailStackEvent{*events[0]}, nil
+			}
 		}
 	}
 }

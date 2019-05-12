@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
@@ -41,7 +42,7 @@ var tailCmd = &cobra.Command{
 			return
 		}
 
-		_, err := sit.PollStackEvents(*stack.StackId, "", func(event stackit.TailStackEvent) {
+		_, err := sit.PollStackEvents(context.Background(), *stack.StackId, "", func(event stackit.TailStackEvent) {
 			printer.PrintTailEvent(event)
 		})
 		if err != nil {

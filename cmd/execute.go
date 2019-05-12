@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
@@ -24,7 +25,7 @@ import (
 	"io"
 )
 
-func executeChangeSet(region, profile, stackName, changeSet string, writer io.Writer) error {
+func executeChangeSet(ctx context.Context, region, profile, stackName, changeSet string, writer io.Writer) error {
 	sess := awsSession(profile, region)
 	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 	events := make(chan stackit.TailStackEvent)
@@ -44,7 +45,7 @@ func executeChangeSet(region, profile, stackName, changeSet string, writer io.Wr
 		}
 	}
 
-	return sit.Execute(stackName, changeSet, events)
+	return sit.Execute(ctx, stackName, changeSet, events)
 }
 
 func findChangeSetIdLocally() (string, error) {
@@ -66,7 +67,7 @@ func init() {
 			stackName := viper.GetString("stack-name")
 			changeSet := viper.GetString("change-set")
 
-			err := executeChangeSet(region, profile, stackName, changeSet, cmd.OutOrStderr())
+			err := executeChangeSet(context.Background(), region, profile, stackName, changeSet, cmd.OutOrStderr())
 			if err != nil {
 				panic(err)
 			}

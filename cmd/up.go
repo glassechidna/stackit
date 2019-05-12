@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -74,7 +75,7 @@ var upCmd = &cobra.Command{
 			}
 		}()
 
-		prepared, err := sit.Prepare(parsed, events)
+		prepared, err := sit.Prepare(context.Background(), parsed, events)
 		if err != nil {
 			panic(err)
 		}
@@ -83,7 +84,7 @@ var upCmd = &cobra.Command{
 			return // no-op change set
 		}
 
-		err = sit.Execute(*prepared.Output.StackId, *prepared.Output.Id, events)
+		err = sit.Execute(context.Background(), *prepared.Output.StackId, *prepared.Output.Id, events)
 		if err != nil {
 			panic(err)
 		}

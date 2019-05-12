@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
@@ -37,7 +38,7 @@ var downCmd = &cobra.Command{
 
 		sess := awsSession(profile, region)
 		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
-		go sit.Down(stackName, events)
+		go sit.Down(context.Background(), stackName, events)
 
 		for tailEvent := range events {
 			printer.PrintTailEvent(tailEvent)

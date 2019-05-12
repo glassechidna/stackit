@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -31,7 +32,7 @@ import (
 	"text/template"
 )
 
-func packageTemplate(region, profile, stackName, templatePath string, tags, parameters map[string]string, writer io.Writer) error {
+func packageTemplate(ctx context.Context, region, profile, stackName, templatePath string, tags, parameters map[string]string, writer io.Writer) error {
 	absPath, err := filepath.Abs(templatePath)
 	if err != nil {
 		return errors.Wrapf(err, "determining absolute path of '%s'", templatePath)
@@ -58,7 +59,7 @@ func packageTemplate(region, profile, stackName, templatePath string, tags, para
 		return errors.Wrap(err, "packaging template")
 	}
 
-	prepared, err := sit.Prepare(*upInput, events)
+	prepared, err := sit.Prepare(ctx, *upInput, events)
 	if err != nil {
 		panic(err)
 	}
@@ -128,7 +129,7 @@ package will:
 			tags := keyvalSliceToMap(tagKvps)
 			params := keyvalSliceToMap(args)
 
-			err := packageTemplate(region, profile, stackName, templatePath, tags, params, cmd.OutOrStderr())
+			err := packageTemplate(context.Background(), region, profile, stackName, templatePath, tags, params, cmd.OutOrStderr())
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "%+v\n", err)
 			}

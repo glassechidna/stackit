@@ -1,6 +1,7 @@
 package stackit
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -62,7 +63,7 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 	return nil
 }
 
-func (s *Stackit) ensureStackReady(stackName string, events chan<- TailStackEvent) error {
+func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events chan<- TailStackEvent) error {
 	stack, err := s.Describe(stackName)
 	if err != nil {
 		return err
@@ -76,7 +77,7 @@ func (s *Stackit) ensureStackReady(stackName string, events chan<- TailStackEven
 			return err
 		}
 
-		_, err = s.PollStackEvents(stackId, token, func(event TailStackEvent) {
+		_, err = s.PollStackEvents(ctx, stackId, token, func(event TailStackEvent) {
 			events <- event
 		})
 		return err
@@ -84,7 +85,7 @@ func (s *Stackit) ensureStackReady(stackName string, events chan<- TailStackEven
 
 	if stack != nil { // stack already exists
 		if !IsTerminalStatus(*stack.StackStatus) && *stack.StackStatus != "REVIEW_IN_PROGRESS" {
-			_, err = s.PollStackEvents(*stack.StackId, "", func(event TailStackEvent) {
+			_, err = s.PollStackEvents(ctx, *stack.StackId, "", func(event TailStackEvent) {
 				events <- event
 			})
 			if err != nil {
@@ -128,8 +129,8 @@ type PrepareOutput struct {
 	TemplateBody string
 }
 
-func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*PrepareOutput, error) {
-	err := s.ensureStackReady(input.StackName, events)
+func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan<- TailStackEvent) (*PrepareOutput, error) {
+	err := s.ensureStackReady(ctx, input.StackName, events)
 	if err != nil {
 		return nil, errors.Wrap(err, "waiting for stack to be in a clean state")
 	}
@@ -215,7 +216,7 @@ func (s *Stackit) Prepare(input StackitUpInput, events chan<- TailStackEvent) (*
 	}, nil
 }
 
-func (s *Stackit) Execute(stackId, changeSetId string, events chan<- TailStackEvent) error {
+func (s *Stackit) Execute(ctx context.Context, stackId, changeSetId string, events chan<- TailStackEvent) error {
 	token := generateToken()
 
 	_, err := s.api.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
@@ -228,7 +229,7 @@ func (s *Stackit) Execute(stackId, changeSetId string, events chan<- TailStackEv
 		return errors.Wrap(err, "executing change set")
 	}
 
-	_, err = s.PollStackEvents(stackId, token, func(event TailStackEvent) {
+	_, err = s.PollStackEvents(ctx, stackId, token, func(event TailStackEvent) {
 		events <- event
 	})
 
