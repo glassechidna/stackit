@@ -23,6 +23,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 		"--always-succeed",
 		"--stack-name", stackName,
 		"--template", "../sample/sample.yml",
+		"--param-value", "HealthCheckPath=/pinga",
 	})
 
 	buf := &bytes.Buffer{}
