@@ -38,10 +38,25 @@ var downCmd = &cobra.Command{
 
 		sess := awsSession(profile, region)
 		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
-		go sit.Down(context.Background(), stackName, events)
 
-		for tailEvent := range events {
-			printer.PrintTailEvent(tailEvent)
+		ctx := context.Background()
+		printerCtx, printerCancel := context.WithCancel(ctx)
+		defer printerCancel()
+
+		go func() {
+			for {
+				select {
+				case <-printerCtx.Done():
+					return
+				case tailEvent := <-events:
+					printer.PrintTailEvent(tailEvent)
+				}
+			}
+		}()
+
+		err := sit.Down(ctx, stackName, events)
+		if err != nil {
+			panic(err)
 		}
 	},
 }

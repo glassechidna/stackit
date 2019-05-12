@@ -1,6 +1,7 @@
 package stackit
 
 import (
+	"context"
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -45,7 +46,7 @@ func TestServiceRoleArnCanBeName(t *testing.T) {
 	}
 
 	ch := make(chan TailStackEvent)
-	_, err := s.Prepare(input, ch)
+	_, err := s.Prepare(context.Background(), input, ch)
 	assert.EqualError(t, err, "creating change set: done")
 }
 
@@ -83,6 +84,6 @@ func TestServiceRoleArnDoesntTriggerStsCall(t *testing.T) {
 	}
 
 	ch := make(chan TailStackEvent)
-	_, err := s.Prepare(input, ch)
+	_, err := s.Prepare(context.Background(), input, ch)
 	assert.EqualError(t, err, "creating change set: done")
 }

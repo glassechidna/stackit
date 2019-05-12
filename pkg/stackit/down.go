@@ -18,7 +18,6 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 		}
 		_, err = s.api.DeleteStack(input)
 		if err != nil {
-			close(events)
 			return err
 		}
 
@@ -26,7 +25,6 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 			events <- event
 		})
 		if err != nil {
-			close(events)
 			return err
 		}
 
@@ -35,13 +33,11 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 			input.ClientRequestToken = &token
 			input.RetainResources, err = s.resourcesToBeRetainedDuringDelete(*stack.StackId, events)
 			if err != nil {
-				close(events)
 				return errors.Wrap(err, "determining resources to be kept")
 			}
 
 			_, err = s.api.DeleteStack(input)
 			if err != nil {
-				close(events)
 				return errors.Wrap(err, "deleting stack")
 			}
 
@@ -49,18 +45,16 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 				events <- event
 			})
 			if err != nil {
-				close(events)
 				return errors.Wrap(err, "deleting stack")
 			}
 		}
 	}
 
-	close(events)
 	return nil
 }
 
 func (s *Stackit) resourcesToBeRetainedDuringDelete(stackName string, events chan<- TailStackEvent) ([]*string, error) {
-	names := []*string{}
+	var names []*string
 
 	err := s.api.ListStackResourcesPages(&cloudformation.ListStackResourcesInput{StackName: &stackName}, func(page *cloudformation.ListStackResourcesOutput, lastPage bool) bool {
 		for _, resource := range page.StackResourceSummaries {
@@ -70,10 +64,6 @@ func (s *Stackit) resourcesToBeRetainedDuringDelete(stackName string, events cha
 		}
 		return !lastPage
 	})
-	if err != nil {
-		close(events)
-		return nil, err
-	}
 
-	return names, nil
+	return names, errors.Wrap(err, "listing stack resources")
 }

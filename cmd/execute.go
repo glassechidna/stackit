@@ -31,9 +31,17 @@ func executeChangeSet(ctx context.Context, region, profile, stackName, changeSet
 	events := make(chan stackit.TailStackEvent)
 	printer := stackit.NewTailPrinterWithOptions(true, true, writer)
 
+	printerCtx, printerCancel := context.WithCancel(ctx)
+	defer printerCancel()
+
 	go func() {
-		for event := range events {
-			printer.PrintTailEvent(event)
+		for {
+			select {
+			case <-printerCtx.Done():
+				return
+			case tailEvent := <-events:
+				printer.PrintTailEvent(tailEvent)
+			}
 		}
 	}()
 

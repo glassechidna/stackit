@@ -73,7 +73,6 @@ func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events
 		token := generateToken()
 		_, err := s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &stackId, ClientRequestToken: &token})
 		if err != nil {
-			close(events)
 			return err
 		}
 
@@ -225,7 +224,6 @@ func (s *Stackit) Execute(ctx context.Context, stackId, changeSetId string, even
 	})
 
 	if err != nil {
-		close(events)
 		return errors.Wrap(err, "executing change set")
 	}
 
@@ -233,6 +231,5 @@ func (s *Stackit) Execute(ctx context.Context, stackId, changeSetId string, even
 		events <- event
 	})
 
-	close(events)
 	return nil
 }

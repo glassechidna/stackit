@@ -69,13 +69,23 @@ var upCmd = &cobra.Command{
 		sess := awsSession(profile, region)
 		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 
+		ctx := context.Background()
+
+		printerCtx, printerCancel := context.WithCancel(ctx)
+		defer printerCancel()
+
 		go func() {
-			for tailEvent := range events {
-				printer.PrintTailEvent(tailEvent)
+			for {
+				select {
+				case <-printerCtx.Done():
+					return
+				case tailEvent := <-events:
+					printer.PrintTailEvent(tailEvent)
+				}
 			}
 		}()
 
-		prepared, err := sit.Prepare(context.Background(), parsed, events)
+		prepared, err := sit.Prepare(ctx, parsed, events)
 		if err != nil {
 			panic(err)
 		}
@@ -84,7 +94,7 @@ var upCmd = &cobra.Command{
 			return // no-op change set
 		}
 
-		err = sit.Execute(context.Background(), *prepared.Output.StackId, *prepared.Output.Id, events)
+		err = sit.Execute(ctx, *prepared.Output.StackId, *prepared.Output.Id, events)
 		if err != nil {
 			panic(err)
 		}
