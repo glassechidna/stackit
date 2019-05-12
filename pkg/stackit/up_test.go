@@ -87,3 +87,11 @@ func TestServiceRoleArnDoesntTriggerStsCall(t *testing.T) {
 	_, err := s.Prepare(context.Background(), input, ch)
 	assert.EqualError(t, err, "creating change set: done")
 }
+
+func TestNoOpChangesetTriggersDelete(t *testing.T) {
+	t.SkipNow()
+}
+
+func TestChangesetErrorIsReported(t *testing.T) {
+	t.SkipNow()
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/glassechidna/stackit/pkg/stackit/changeset"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -31,7 +32,7 @@ func (s *Stackit) Transform(template string, paramMap map[string]string) (*strin
 		return nil, errors.Wrap(err, "creating change set")
 	}
 
-	_, err = s.waitForChangeset(createResp.Id)
+	_, err = changeset.Wait(s.api, *createResp.Id)
 	if err != nil {
 		return nil, errors.Wrap(err, "waiting for change set")
 	}
@@ -50,35 +51,4 @@ func (s *Stackit) Transform(template string, paramMap map[string]string) (*strin
 	}
 
 	return getResp.TemplateBody, err
-}
-
-func (s *Stackit) waitForChangeset(id *string) (*cloudformation.DescribeChangeSetOutput, error) {
-	status := "CREATE_PENDING"
-	terminal := []string{"CREATE_COMPLETE", "DELETE_COMPLETE", "FAILED"}
-
-	var resp *cloudformation.DescribeChangeSetOutput
-	var err error
-
-	for !stringInSlice(terminal, status) {
-		resp, err = s.api.DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
-			ChangeSetName: id,
-		})
-		if err != nil {
-			return resp, errors.Wrap(err, "describing change set")
-		}
-
-		status = *resp.Status
-		reason := ""
-		if resp.StatusReason != nil {
-			reason = *resp.StatusReason
-		}
-
-		if status == "FAILED" && reason != "The submitted information didn't contain changes. Submit different information to create a change set." {
-			return resp, errors.New(reason)
-		}
-
-		time.Sleep(2 * time.Second)
-	}
-
-	return resp, nil
 }

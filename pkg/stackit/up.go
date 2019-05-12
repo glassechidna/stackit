@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/glassechidna/stackit/pkg/stackit/changeset"
 	"github.com/pkg/errors"
 	"strings"
 	"time"
@@ -185,10 +186,8 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 		return nil, errors.Wrap(err, "creating change set")
 	}
 
-	change, err := s.waitForChangeset(resp.Id)
-
-	isNoop := change != nil && len(change.Changes) == 0
-	if isNoop { // update is a no-op, nothing to change
+	change, err := changeset.Wait(s.api, *resp.Id)
+	if _, ok := err.(*changeset.NoOpChangesetError); ok {
 		_, err = s.api.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
 		return nil, errors.Wrap(err, "waiting for no-op changeset to delete")
 	}
