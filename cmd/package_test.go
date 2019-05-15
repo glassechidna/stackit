@@ -86,12 +86,12 @@ Stack ID: arn:aws:cloudformation:ap-southeast-2:720884384464:stack/aidan-mtd-tes
 Change Set ID: arn:aws:cloudformation:ap-southeast-2:720884384464:changeSet/aidan-mtd-test-csid-1557355052/dc7928df-d27e-4992-a350-9ee4ba357999
 Changes:
 
-+--------+-----------------------+
-| ACTION |       RESOURCE        |
-+--------+-----------------------+
-| Add    | Cell                  |
-| Add    | CodeDeployServiceRole |
-+--------+-----------------------+
++--------+-----------------------+----------------------+
+| ACTION |       RESOURCE        |         TYPE         |
++--------+-----------------------+----------------------+
+| Add    | Cell                  | Custom::XeroCellInfo |
+| Add    | CodeDeployServiceRole | AWS::IAM::Role       |
++--------+-----------------------+----------------------+
 `
 	assert.Equal(t, expected, userFriendlyChangesOutput(&input))
 }
@@ -118,14 +118,14 @@ Stack ID: arn:aws:cloudformation:ap-southeast-2:\d+:stack/test-stack-packaged/[a
 Change Set ID: arn:aws:cloudformation:ap-southeast-2:\d+:changeSet/test-stack-packaged-csid-\d+/[a-f0-9-]+
 Changes:
 
-\+--------\+---------------------------\+
-\| ACTION \|         RESOURCE          \|
-\+--------\+---------------------------\+
-\| Add    \| Function                  \|
-\| Add    \| FunctionAliaslive         \|
-\| Add    \| FunctionRole              \|
-\| Add    \| FunctionVersion\S+\s*\|
-\+--------\+---------------------------\+
+\+--------\+---------------------------\+-----------------------\+
+\| ACTION \|         RESOURCE          \|         TYPE          \|
+\+--------\+---------------------------\+-----------------------\+
+\| Add    \| Function                  \| AWS::Lambda::Function \|
+\| Add    \| FunctionAliaslive         \| AWS::Lambda::Alias    \|
+\| Add    \| FunctionRole              \| AWS::IAM::Role        \|
+\| Add    \| FunctionVersion\S+\s*\| AWS::Lambda::Version  \|
+\+--------\+---------------------------\+-----------------------\+
 `), buf.String())
 	})
 
