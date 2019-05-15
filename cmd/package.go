@@ -85,10 +85,14 @@ func packageTemplate(ctx context.Context, region, profile, stackName, templatePa
 func userFriendlyChangesOutput(output *stackit.PrepareOutput) string {
 	sbuf := &strings.Builder{}
 	tbl := tablewriter.NewWriter(sbuf)
-	tbl.SetHeader([]string{"Action", "Resource"})
+	tbl.SetHeader([]string{"Action", "Resource", "Type"})
 
 	for _, change := range output.Changes {
-		tbl.Append([]string{*change.ResourceChange.Action, *change.ResourceChange.LogicalResourceId})
+		tbl.Append([]string{
+			*change.ResourceChange.Action,
+			*change.ResourceChange.LogicalResourceId,
+			*change.ResourceChange.ResourceType,
+		})
 	}
 
 	tbl.Render()
