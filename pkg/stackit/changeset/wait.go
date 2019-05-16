@@ -10,6 +10,7 @@ import (
 type NoOpChangesetError struct{}
 
 const errNoOp = "The submitted information didn't contain changes. Submit different information to create a change set."
+const errNoOp2 = "No updates are to be performed."
 
 func (e *NoOpChangesetError) Error() string {
 	return errNoOp
@@ -37,7 +38,7 @@ func Wait(api cloudformationiface.CloudFormationAPI, id string) (*cloudformation
 		}
 
 		if status == "FAILED" {
-			if reason == errNoOp {
+			if reason == errNoOp || reason == errNoOp2 {
 				return resp, &NoOpChangesetError{}
 			} else {
 				return nil, errors.New(reason)
