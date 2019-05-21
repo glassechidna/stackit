@@ -145,3 +145,22 @@ func TestUp(t *testing.T) {
 	})
 
 }
+
+func TestKeyvalSliceToMap(t *testing.T) {
+	var m map[string]string
+
+	m = keyvalSliceToMap(nil)
+	assert.Len(t, m, 0)
+
+	m = keyvalSliceToMap([]string{})
+	assert.Len(t, m, 0)
+
+	m = keyvalSliceToMap([]string{"a=b"})
+	assert.Len(t, m, 1)
+
+	m = keyvalSliceToMap([]string{"a=b", "c=d"})
+	assert.Len(t, m, 2)
+
+	m = keyvalSliceToMap([]string{"a=b", "cd"})
+	assert.Len(t, m, 1)
+}

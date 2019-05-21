@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -113,6 +114,10 @@ func keyvalSliceToMap(slice []string) map[string]string {
 
 	for _, paramPair := range slice {
 		parts := strings.SplitN(paramPair, "=", 2)
+		if len(parts) != 2 {
+			fmt.Fprintf(os.Stderr, `ignoring unexpected key-value pair "%s"`+"\n", paramPair)
+			continue
+		}
 		name, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
 		theMap[name] = value
 	}
