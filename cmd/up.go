@@ -101,10 +101,10 @@ func printUntilDone(ctx context.Context, events <-chan stackit.TailStackEvent, w
 
 	for {
 		select {
-		case <-ctx.Done():
-			return
 		case tailEvent := <-events:
 			printer.PrintTailEvent(tailEvent)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
