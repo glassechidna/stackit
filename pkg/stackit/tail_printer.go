@@ -42,8 +42,7 @@ func (tp *TailPrinter) FormatTailEvent(tailEvent TailStackEvent) string {
 
 func (tp *TailPrinter) PrintTailEvent(tailEvent TailStackEvent) {
 	line := tp.FormatTailEvent(tailEvent)
-	tp.writer.Write([]byte(line))
-	tp.writer.Write([]byte("\n"))
+	fmt.Fprintln(tp.writer, line)
 }
 
 func fixedLengthString(length int, str string) string {
