@@ -30,7 +30,6 @@ var downCmd = &cobra.Command{
 		region := viper.GetString("region")
 		profile := viper.GetString("profile")
 		stackName := viper.GetString("stack-name")
-		printer := stackit.NewTailPrinter(cmd.OutOrStderr())
 
 		events := make(chan stackit.TailStackEvent)
 
@@ -40,17 +39,7 @@ var downCmd = &cobra.Command{
 		ctx := context.Background()
 		printerCtx, printerCancel := context.WithCancel(ctx)
 		defer printerCancel()
-
-		go func() {
-			for {
-				select {
-				case <-printerCtx.Done():
-					return
-				case tailEvent := <-events:
-					printer.PrintTailEvent(tailEvent)
-				}
-			}
-		}()
+		go printUntilDone(printerCtx, events, cmd.OutOrStderr())
 
 		err := sit.Down(ctx, stackName, events)
 		if err != nil {

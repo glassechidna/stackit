@@ -29,21 +29,10 @@ func executeChangeSet(ctx context.Context, region, profile, stackName, changeSet
 	sess := awsSession(profile, region)
 	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 	events := make(chan stackit.TailStackEvent)
-	printer := stackit.NewTailPrinter(writer)
 
 	printerCtx, printerCancel := context.WithCancel(ctx)
 	defer printerCancel()
-
-	go func() {
-		for {
-			select {
-			case <-printerCtx.Done():
-				return
-			case tailEvent := <-events:
-				printer.PrintTailEvent(tailEvent)
-			}
-		}
-	}()
+	go printUntilDone(printerCtx, events, writer)
 
 	var err error
 	if len(changeSet) == 0 {

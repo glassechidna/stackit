@@ -23,6 +23,7 @@ import (
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -68,20 +69,9 @@ var upCmd = &cobra.Command{
 
 		ctx := context.Background()
 
-		printer := stackit.NewTailPrinter(cmd.OutOrStderr())
 		printerCtx, printerCancel := context.WithCancel(ctx)
 		defer printerCancel()
-
-		go func() {
-			for {
-				select {
-				case <-printerCtx.Done():
-					return
-				case tailEvent := <-events:
-					printer.PrintTailEvent(tailEvent)
-				}
-			}
-		}()
+		go printUntilDone(printerCtx, events, cmd.OutOrStderr())
 
 		prepared, err := sit.Prepare(ctx, parsed, events)
 		if err != nil {
@@ -104,6 +94,19 @@ var upCmd = &cobra.Command{
 
 		sit.PrintOutputs(stackId, cmd.OutOrStdout())
 	},
+}
+
+func printUntilDone(ctx context.Context, events <-chan stackit.TailStackEvent, w io.Writer) {
+	printer := stackit.NewTailPrinter(w)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case tailEvent := <-events:
+			printer.PrintTailEvent(tailEvent)
+		}
+	}
 }
 
 func keyvalSliceToMap(slice []string) map[string]string {

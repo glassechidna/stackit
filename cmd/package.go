@@ -52,21 +52,10 @@ func packageTemplate(ctx context.Context, region, profile, stackName, templatePa
 	packager := stackit.NewPackager(s3api, sts.New(sess), region)
 
 	events := make(chan stackit.TailStackEvent)
-	printer := stackit.NewTailPrinter(writer)
 
 	printerCtx, printerCancel := context.WithCancel(ctx)
 	defer printerCancel()
-
-	go func() {
-		for {
-			select {
-			case <-printerCtx.Done():
-				return
-			case tailEvent := <-events:
-				printer.PrintTailEvent(tailEvent)
-			}
-		}
-	}()
+	go printUntilDone(printerCtx, events, writer)
 
 	upInput, err := packager.Package(stackName, absPath, tags, parameters)
 	if err != nil {
