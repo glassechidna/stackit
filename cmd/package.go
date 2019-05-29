@@ -43,7 +43,13 @@ func packageTemplate(ctx context.Context, region, profile, stackName, templatePa
 
 	sess := awsSession(profile, region)
 	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
-	packager := stackit.NewPackager(s3.New(sess), sts.New(sess), region)
+
+	s3api := s3.New(sess)
+	if region == "" && s3api.Config.Region != nil {
+		region = *s3api.Config.Region
+	}
+
+	packager := stackit.NewPackager(s3api, sts.New(sess), region)
 
 	events := make(chan stackit.TailStackEvent)
 	printer := stackit.NewTailPrinterWithOptions(true, true, writer)
