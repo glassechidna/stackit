@@ -1,0 +1,5 @@
+Resources:
+  Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: s3://bucket/key.yml?versionId=abc

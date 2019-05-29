@@ -1,0 +1,5 @@
+Resources:
+  Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./stack.yml
