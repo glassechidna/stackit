@@ -49,10 +49,6 @@ var upCmd = &cobra.Command{
 		previousTemplate := viper.GetBool("previous-template")
 		alwaysSucceed := viper.GetBool("always-succeed")
 
-		showTimestamps := !viper.GetBool("no-timestamps")
-		showColor := !viper.GetBool("no-color")
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
-
 		parsed := parseCLIInput(
 			serviceRole,
 			stackPolicy,
@@ -72,6 +68,7 @@ var upCmd = &cobra.Command{
 
 		ctx := context.Background()
 
+		printer := stackit.NewTailPrinter(cmd.OutOrStderr())
 		printerCtx, printerCancel := context.WithCancel(ctx)
 		defer printerCancel()
 
@@ -203,8 +200,6 @@ func init() {
 	upCmd.PersistentFlags().StringArrayVar(&tags, "tag", []string{}, "")
 	upCmd.PersistentFlags().StringArrayVar(&notificationArns, "notification-arn", []string{}, "")
 	upCmd.PersistentFlags().Bool("previous-template", false, "")
-	upCmd.PersistentFlags().Bool("no-timestamps", false, "")
-	upCmd.PersistentFlags().Bool("no-color", false, "")
 	upCmd.PersistentFlags().Bool("always-succeed", false, "Typically stackit will return a nonzero exit code on failure. This disables that.")
 
 	viper.BindPFlags(upCmd.PersistentFlags())

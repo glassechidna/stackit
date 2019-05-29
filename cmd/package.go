@@ -52,7 +52,7 @@ func packageTemplate(ctx context.Context, region, profile, stackName, templatePa
 	packager := stackit.NewPackager(s3api, sts.New(sess), region)
 
 	events := make(chan stackit.TailStackEvent)
-	printer := stackit.NewTailPrinterWithOptions(true, true, writer)
+	printer := stackit.NewTailPrinter(writer)
 
 	printerCtx, printerCancel := context.WithCancel(ctx)
 	defer printerCancel()

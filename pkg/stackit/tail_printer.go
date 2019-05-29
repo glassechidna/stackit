@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -14,25 +13,10 @@ type TailPrinter struct {
 	writer          io.Writer
 }
 
-func NewTailPrinter() TailPrinter {
-	return NewTailPrinterWithOptions(true, true, os.Stderr)
-}
-
-func NewTailPrinterWithOptions(showTimestamp, showColors bool, writer io.Writer) TailPrinter {
-	format := ""
-	if showTimestamp {
-		format = "[03:04:05]"
-	}
-
-	failureColor := color.New(color.FgRed)
-
-	if !showColors {
-		failureColor = nil
-	}
-
+func NewTailPrinter(writer io.Writer) TailPrinter {
 	return TailPrinter{
-		timestampFormat: format,
-		failureColor:    failureColor,
+		timestampFormat: "[03:04:05]",
+		failureColor:    color.New(color.FgRed),
 		writer:          writer,
 	}
 }

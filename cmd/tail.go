@@ -30,9 +30,7 @@ var tailCmd = &cobra.Command{
 		region := viper.GetString("region")
 		profile := viper.GetString("profile")
 		stackName := viper.GetString("stack-name")
-		showTimestamps := !viper.GetBool("no-timestamps")
-		showColor := !viper.GetBool("no-color")
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
+		printer := stackit.NewTailPrinter(cmd.OutOrStderr())
 
 		sess := awsSession(profile, region)
 		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))

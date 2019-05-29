@@ -30,9 +30,7 @@ var downCmd = &cobra.Command{
 		region := viper.GetString("region")
 		profile := viper.GetString("profile")
 		stackName := viper.GetString("stack-name")
-		showTimestamps := !viper.GetBool("no-timestamps")
-		showColor := !viper.GetBool("no-color")
-		printer := stackit.NewTailPrinterWithOptions(showTimestamps, showColor, cmd.OutOrStderr())
+		printer := stackit.NewTailPrinter(cmd.OutOrStderr())
 
 		events := make(chan stackit.TailStackEvent)
 
@@ -63,9 +61,4 @@ var downCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(downCmd)
-
-	downCmd.PersistentFlags().Bool("no-timestamps", false, "")
-	downCmd.PersistentFlags().Bool("no-color", false, "")
-	viper.BindPFlags(downCmd.PersistentFlags())
-
 }
