@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
@@ -28,13 +27,21 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 		"--param-value", "HealthCheckPath=/pinga",
 	})
 
-	buf := &bytes.Buffer{}
-	out := io.MultiWriter(buf, os.Stderr)
+	pr, pw := io.Pipe()
+	outputcopy := &bytes.Buffer{}
+	out := io.MultiWriter(pw, outputcopy, os.Stderr)
 	RootCmd.SetOutput(out)
 
-	time.AfterFunc(5*time.Second, func() {
+	go func() {
+		buf := &bytes.Buffer{}
+
 		for !strings.Contains(buf.String(), "LogGroup - CREATE_IN_PROGRESS") {
-			time.Sleep(time.Second)
+			b := make([]byte, 500)
+			n, err := pr.Read(b)
+			if err != nil && err != io.EOF {
+				panic(err)
+			}
+			buf.Write(b[:n])
 		}
 
 		sess := session.Must(session.NewSession(aws.NewConfig().WithRegion("ap-southeast-2")))
@@ -44,7 +51,9 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-	})
+
+		io.Copy(buf, pr)
+	}()
 
 	_ = RootCmd.Execute()
 
@@ -57,7 +66,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d] test-cancelled-stack - DELETE_COMPLETE 
 \{\}
-`), buf.String())
+`), outputcopy.String())
 }
 
 func TestUp(t *testing.T) {
