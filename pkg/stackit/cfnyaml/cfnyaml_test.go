@@ -55,6 +55,11 @@ var tests = []tableTestEntry{
 			"./stack.yml": {"bucket", "key.yml", "abc"},
 		},
 	},
+	{
+		Name:         "f",
+		Explanation:  "no-op",
+		Replacements: map[string]rewrittenLocation{},
+	},
 }
 
 func TestCfnYaml_PackageableNodes(t *testing.T) {

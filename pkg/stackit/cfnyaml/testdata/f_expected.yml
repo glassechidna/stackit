@@ -1,0 +1,14 @@
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri:
+        Bucket: stackit-ap-southeast-2-607481581596
+        Key: func.zip
+        Version: GNz4tYuVVvtLYlE5touSEDnp6keZUIDJ
+      Timeout: 60
+      AutoPublishAlias: live

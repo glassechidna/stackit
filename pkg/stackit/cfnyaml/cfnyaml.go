@@ -68,7 +68,7 @@ func (c *CfnYaml) PackageableNodes() ([]PackageableNode, error) {
 
 		if def := packageableDefinition(resType); def != nil {
 			propNode := valueForKey(valueNode, def.Path...)
-			if propNode != nil {
+			if propNode != nil && looksPackageable(propNode, def) {
 				nodes = append(nodes, PackageableNode{
 					Name:  name,
 					Value: propNode.Value,
@@ -84,6 +84,11 @@ func (c *CfnYaml) PackageableNodes() ([]PackageableNode, error) {
 	}
 
 	return nodes, nil
+}
+
+func looksPackageable(n *yaml.Node, def *packageablePropertyDefinition) bool {
+	// TODO: https://github.com/glassechidna/stackit/issues/34
+	return n.Kind == yaml.ScalarNode
 }
 
 func packageableDefinition(typ string) *packageablePropertyDefinition {
