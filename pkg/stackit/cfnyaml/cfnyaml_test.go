@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -65,7 +66,9 @@ var tests = []tableTestEntry{
 func TestCfnYaml_PackageableNodes(t *testing.T) {
 	for _, e := range tests {
 		t.Run(e.Explanation, func(t *testing.T) {
-			c, err := ParseFile(fmt.Sprintf("testdata/%s_input.yml", e.Name))
+			f, _ := os.Open(fmt.Sprintf("testdata/%s_input.yml", e.Name))
+			b, _ := ioutil.ReadAll(f)
+			c, err := Parse(b)
 			assert.NoError(t, err)
 
 			nodes, err := c.PackageableNodes()

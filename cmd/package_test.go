@@ -21,7 +21,10 @@ func TestUsefulErrorIfTemplateDoesntExist(t *testing.T) {
 		"--template", "doesnt-exist.yml",
 	})
 
-	RootCmd.Execute()
+	assert.NotPanics(t, func() {
+		RootCmd.Execute()
+	})
+
 	assert.Regexp(t, regexp.MustCompile(`^no file exists at`), buf.String())
 }
 
@@ -105,40 +108,16 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 	out := io.MultiWriter(buf, os.Stderr)
 	RootCmd.SetOutput(out)
 
-	t.Run("package", func(t *testing.T) {
+	t.Run("up", func(t *testing.T) {
 		RootCmd.SetArgs([]string{
-			"package",
+			"up",
 			"--stack-name", "test-stack-packaged",
 			"--template", "../sample/serverless.yml",
 		})
 		_ = RootCmd.Execute()
 
-		assert.Regexp(t, regexp.MustCompile(`
-Stack ID: arn:aws:cloudformation:ap-southeast-2:\d+:stack/test-stack-packaged/[a-f0-9-]+
-Change Set ID: arn:aws:cloudformation:ap-southeast-2:\d+:changeSet/test-stack-packaged-csid-\d+/[a-f0-9-]+
-Changes:
-
-\+--------\+---------------------------\+-----------------------\+
-\| ACTION \|         RESOURCE          \|         TYPE          \|
-\+--------\+---------------------------\+-----------------------\+
-\| Add    \| Function                  \| AWS::Lambda::Function \|
-\| Add    \| FunctionAliaslive         \| AWS::Lambda::Alias    \|
-\| Add    \| FunctionRole              \| AWS::IAM::Role        \|
-\| Add    \| FunctionVersion\S+\s*\| AWS::Lambda::Version  \|
-\+--------\+---------------------------\+-----------------------\+
-`), buf.String())
-	})
-
-	buf.Reset()
-
-	t.Run("execute", func(t *testing.T) {
-		RootCmd.SetArgs([]string{
-			"execute",
-			"--stack-name", "test-stack-packaged",
-		})
-		_ = RootCmd.Execute()
-
-		assert.Regexp(t, regexp.MustCompile(`\[\d\d:\d\d:\d\d]  test-stack-packaged - CREATE_IN_PROGRESS - User Initiated
+		assert.Regexp(t, regexp.MustCompile(`Uploaded ./func to s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip \(v = [^)]+\)
+\[\d\d:\d\d:\d\d]  test-stack-packaged - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_COMPLETE 

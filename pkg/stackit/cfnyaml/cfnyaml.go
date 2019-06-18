@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 )
 
 type CfnYaml struct {
@@ -15,15 +14,10 @@ func (c *CfnYaml) MarshalYAML() (interface{}, error) {
 	return &c.Node, nil
 }
 
-func ParseFile(path string) (*CfnYaml, error) {
+func Parse(body []byte) (*CfnYaml, error) {
 	c := &CfnYaml{}
 
-	byt, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading file")
-	}
-
-	err = yaml.Unmarshal(byt, &c.Node)
+	err := yaml.Unmarshal(body, &c.Node)
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshalling yaml")
 	}

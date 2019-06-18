@@ -21,80 +21,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/glassechidna/stackit/pkg/stackit"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 )
-
-// up --stack-name stackit-test --template sample.yml --param-value DockerImage=nginx --param-value Cluster=app-cluster-Cluster-1C2I18JXK9QNM --tag MyTag=Cool
-
-var paramValues []string
-var previousParamValues []string
-var tags []string
-var notificationArns []string
-
-var upCmd = &cobra.Command{
-	Use:   "up",
-	Short: "Bring stack up to date",
-	Run: func(cmd *cobra.Command, args []string) {
-		region := viper.GetString("region")
-		profile := viper.GetString("profile")
-		stackName := viper.GetString("stack-name")
-
-		serviceRole := viper.GetString("service-role")
-		stackPolicy := viper.GetString("stack-policy")
-		template := viper.GetString("template")
-		previousTemplate := viper.GetBool("previous-template")
-		alwaysSucceed := viper.GetBool("always-succeed")
-
-		parsed := parseCLIInput(
-			serviceRole,
-			stackPolicy,
-			template,
-			paramValues,
-			previousParamValues,
-			tags,
-			notificationArns,
-			previousTemplate)
-
-		parsed.StackName = stackName
-
-		events := make(chan stackit.TailStackEvent)
-
-		sess := awsSession(profile, region)
-		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
-
-		ctx := context.Background()
-
-		printerCtx, printerCancel := context.WithCancel(ctx)
-		defer printerCancel()
-		go printUntilDone(printerCtx, events, cmd.OutOrStderr())
-
-		prepared, err := sit.Prepare(ctx, parsed, events)
-		if err != nil {
-			panic(err)
-		}
-
-		if prepared == nil {
-			return // no-op change set
-		}
-
-		err = sit.Execute(ctx, *prepared.Output.StackId, *prepared.Output.Id, events)
-		if err != nil {
-			panic(err)
-		}
-
-		stackId := *prepared.Output.StackId
-		if success, _ := sit.IsSuccessfulState(stackId); !success && !alwaysSucceed {
-			os.Exit(1)
-		}
-
-		sit.PrintOutputs(stackId, cmd.OutOrStdout())
-	},
-}
 
 func printUntilDone(ctx context.Context, events <-chan stackit.TailStackEvent, w io.Writer) {
 	printer := stackit.NewTailPrinter(w)
@@ -125,16 +58,15 @@ func keyvalSliceToMap(slice []string) map[string]string {
 	return theMap
 }
 
-func parseCLIInput(
-	serviceRole,
-	stackPolicy,
-	template string,
-	cliParamValues,
-	previousParamValues,
-	tags,
-	notificationArns []string,
-	previousTemplate bool) stackit.StackitUpInput {
+func parseCLIInput(cmd *cobra.Command, args []string) stackit.StackitUpInput {
+	stackName, _ := RootCmd.PersistentFlags().GetString("stack-name")
+	serviceRole, _ := cmd.PersistentFlags().GetString("service-role")
+	template, _ := cmd.PersistentFlags().GetString("template")
+	tags, _ := cmd.PersistentFlags().GetStringSlice("tag")
+	notificationArns, _ := cmd.PersistentFlags().GetStringSlice("notification-arn")
+
 	input := stackit.StackitUpInput{
+		StackName:       stackName,
 		PopulateMissing: true,
 	}
 
@@ -142,43 +74,22 @@ func parseCLIInput(
 		input.RoleARN = serviceRole
 	}
 
-	if len(stackPolicy) > 0 {
-		policyBody, err := ioutil.ReadFile(stackPolicy)
-		if err != nil {
-
-		} else {
-			input.StackPolicyBody = string(policyBody)
-		}
-	}
-
 	if len(template) > 0 {
-		templateBody, err := ioutil.ReadFile(template)
+		var err error
+		input.Template, err = pathToTemplate(template)
 		if err != nil {
-
-		} else {
-			input.TemplateBody = string(templateBody)
+			panic(err)
+			// TODO
 		}
-	}
-
-	input.PreviousTemplate = previousTemplate
-
-	paramMap := keyvalSliceToMap(viper.GetStringSlice("parameters"))
-	for key, val := range keyvalSliceToMap(cliParamValues) {
-		paramMap[key] = val
+	} else {
+		input.PreviousTemplate = true
 	}
 
 	params := []*cloudformation.Parameter{}
-	for name, value := range paramMap {
+	for name, value := range keyvalSliceToMap(args) {
 		params = append(params, &cloudformation.Parameter{
 			ParameterKey:   aws.String(name),
 			ParameterValue: aws.String(value),
-		})
-	}
-
-	for _, param := range previousParamValues {
-		params = append(params, &cloudformation.Parameter{
-			ParameterKey:     aws.String(param),
-			UsePreviousValue: aws.Bool(true),
 		})
 	}
 
@@ -192,18 +103,74 @@ func parseCLIInput(
 	return input
 }
 
+var errUnsuccessfulStack = errors.New("stack update unsuccessful")
+
+func up(cmd *cobra.Command, args []string) error {
+	region := viper.GetString("region")
+	profile := viper.GetString("profile")
+	input := parseCLIInput(cmd, args)
+
+	sess := awsSession(profile, region)
+	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
+
+	ctx := context.Background()
+
+	printerCtx, printerCancel := context.WithCancel(ctx)
+	defer printerCancel()
+
+	if templateFile, ok := input.Template.(*templateReader); ok && templateFile != nil {
+		template, err := packageTemplate(ctx, sess, input.StackName, templateFile, cmd.OutOrStderr())
+		if err != nil {
+			return errors.Wrap(err, "packaging template")
+		}
+		templateFile.body = *template
+	}
+
+	events := make(chan stackit.TailStackEvent)
+	go printUntilDone(printerCtx, events, cmd.OutOrStderr())
+
+	prepared, err := sit.Prepare(ctx, input, events)
+	if err != nil {
+		return err
+	}
+
+	if prepared == nil {
+		return nil
+	}
+
+	err = sit.Execute(ctx, *prepared.Output.StackId, *prepared.Output.Id, events)
+	if err != nil {
+		return err
+	}
+
+	stackId := *prepared.Output.StackId
+	if success, _ := sit.IsSuccessfulState(stackId); !success {
+		return errUnsuccessfulStack
+	}
+
+	sit.PrintOutputs(stackId, cmd.OutOrStdout())
+	return nil
+}
+
 func init() {
+	upCmd := &cobra.Command{
+		Use:   "up",
+		Short: "Bring stack up to date",
+		Run: func(cmd *cobra.Command, args []string) {
+			err := up(cmd, args)
+			if err == errUnsuccessfulStack {
+				defaultExiter(1)
+			} else if err != nil {
+				panic(err)
+			}
+		},
+	}
 	RootCmd.AddCommand(upCmd)
 
 	upCmd.PersistentFlags().String("service-role", "", "")
-	upCmd.PersistentFlags().String("stack-policy", "", "")
 	upCmd.PersistentFlags().String("template", "", "")
-	upCmd.PersistentFlags().StringArrayVar(&paramValues, "param-value", []string{}, "")
-	upCmd.PersistentFlags().StringArrayVar(&previousParamValues, "previous-param-value", []string{}, "")
-	upCmd.PersistentFlags().StringArrayVar(&tags, "tag", []string{}, "")
-	upCmd.PersistentFlags().StringArrayVar(&notificationArns, "notification-arn", []string{}, "")
-	upCmd.PersistentFlags().Bool("previous-template", false, "")
-	upCmd.PersistentFlags().Bool("always-succeed", false, "Typically stackit will return a nonzero exit code on failure. This disables that.")
-
-	viper.BindPFlags(upCmd.PersistentFlags())
+	upCmd.PersistentFlags().StringSliceP("tag", "t", []string{}, "")
+	upCmd.PersistentFlags().StringSlice("notification-arn", []string{}, "")
 }
+
+var defaultExiter = os.Exit

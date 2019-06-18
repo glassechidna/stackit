@@ -13,11 +13,16 @@ import (
 	"time"
 )
 
+type Template interface {
+	fmt.Stringer
+	Name() string
+}
+
 type StackitUpInput struct {
 	StackName        string
 	RoleARN          string
 	StackPolicyBody  string
-	TemplateBody     string
+	Template         Template
 	PreviousTemplate bool
 	Parameters       []*cloudformation.Parameter
 	Tags             map[string]string
@@ -44,14 +49,14 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 		})
 	}
 
-	if len(input.TemplateBody) == 0 {
+	if input.Template == nil {
 		input.PreviousTemplate = true
 
 		for _, param := range stack.Parameters {
 			maybeAddParam(param.ParameterKey, nil)
 		}
 	} else {
-		resp, err := s.api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: &input.TemplateBody})
+		resp, err := s.api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: aws.String(input.Template.String())})
 		if err != nil {
 			return err
 		}
@@ -160,8 +165,8 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 		UsePreviousTemplate: &input.PreviousTemplate,
 	}
 
-	if len(input.TemplateBody) > 0 {
-		createInput.TemplateBody = &input.TemplateBody
+	if input.Template != nil {
+		createInput.TemplateBody = aws.String(input.Template.String())
 	}
 
 	if roleArn := input.RoleARN; len(roleArn) > 0 {

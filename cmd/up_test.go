@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
@@ -21,10 +22,9 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 	stackName := "test-cancelled-stack"
 	RootCmd.SetArgs([]string{
 		"up",
-		"--always-succeed",
 		"--stack-name", stackName,
 		"--template", "../sample/sample.yml",
-		"--param-value", "HealthCheckPath=/pinga",
+		"HealthCheckPath=/pinga",
 	})
 
 	pr, pw := io.Pipe()
@@ -44,6 +44,8 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 			buf.Write(b[:n])
 		}
 
+		time.Sleep(time.Second)
+
 		sess := session.Must(session.NewSession(aws.NewConfig().WithRegion("ap-southeast-2")))
 		cfn := cloudformation.New(sess)
 		input := &cloudformation.DeleteStackInput{StackName: &stackName}
@@ -55,8 +57,17 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 		io.Copy(buf, pr)
 	}()
 
-	_ = RootCmd.Execute()
+	assert.NotPanics(t, func() {
+		defaultExiter = func(code int) {
+			assert.Equal(t, 1, code)
+		}
+		defer func() {
+			defaultExiter = os.Exit
+		}()
+		_ = RootCmd.Execute()
+	})
 
+	actual := outputcopy.String()
 	assert.Regexp(t, regexp.MustCompile(`^\[\d\d:\d\d:\d\d] test-cancelled-stack - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
@@ -65,8 +76,7 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d] test-cancelled-stack - DELETE_COMPLETE 
-\{\}
-`), outputcopy.String())
+`), actual)
 }
 
 func TestUp(t *testing.T) {
@@ -79,7 +89,7 @@ func TestUp(t *testing.T) {
 			"up",
 			"--stack-name", "test-stack",
 			"--template", "../sample/sample.yml",
-			"--param-value", "HealthCheckPath=/pinga",
+			"HealthCheckPath=/pinga",
 		})
 
 		buf := &bytes.Buffer{}
@@ -111,7 +121,7 @@ func TestUp(t *testing.T) {
 			"up",
 			"--stack-name", "test-stack",
 			"--template", "../sample/sample.yml",
-			"--param-value", "HealthCheckPath=/pingb",
+			"HealthCheckPath=/pingb",
 		})
 
 		buf := &bytes.Buffer{}
