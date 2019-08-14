@@ -26,3 +26,9 @@ func TestEnsureBucket(t *testing.T) {
 	assert.NotEmpty(t, bucket)
 	spew.Dump(bucket)
 }
+
+func TestMd5path(t *testing.T) {
+	sum, err := md5path("testdata/helloworld.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, "6f5902ac237024bdd0c176cb93063dc4", sum)
+}

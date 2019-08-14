@@ -2,6 +2,8 @@ package packager
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
@@ -9,6 +11,7 @@ import (
 	"github.com/glassechidna/stackit/pkg/zipper"
 	"github.com/pkg/errors"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -59,12 +62,17 @@ func (p *Packager) Package(ctx context.Context, prefix string, templateReader Te
 	errch := make(chan error)
 	for artifactPath, zipPath := range artifacts {
 		go func(artifactPath, zipPath string) {
-			key := strings.TrimPrefix(fmt.Sprintf("%s/%s.zip", prefix, strings.TrimSuffix(filepath.Base(artifactPath), ".zip")), "/")
+			basename, _ := md5path(zipPath)
+			key := strings.TrimPrefix(fmt.Sprintf("%s/%s.zip", prefix, basename), "/")
 			up, err := p.Upload(ctx, key, zipPath)
 			uploads[artifactPath] = up
 			errch <- errors.Wrap(err, "uploading zip to s3")
 			if up != nil {
-				fmt.Fprintf(writer, "Uploaded %s to s3://%s/%s (v = %s)\n", artifactPath, up.Bucket, up.Key, up.VersionId)
+				if up.AlreadyExists {
+					fmt.Fprintf(writer, "%s already exists at s3://%s/%s (v = %s)\n", artifactPath, up.Bucket, up.Key, up.VersionId)
+				} else {
+					fmt.Fprintf(writer, "Uploaded %s to s3://%s/%s (v = %s)\n", artifactPath, up.Bucket, up.Key, up.VersionId)
+				}
 			}
 		}(artifactPath, zipPath)
 	}
@@ -84,4 +92,20 @@ func (p *Packager) Package(ctx context.Context, prefix string, templateReader Te
 
 	templateBody := c.String()
 	return &templateBody, nil
+}
+
+func md5path(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	h := md5.New()
+	_, err = io.Copy(h, f)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	sum := h.Sum(nil)
+	return hex.EncodeToString(sum), nil
 }
