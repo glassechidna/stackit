@@ -1,7 +1,7 @@
-on: push
 name: Release
-push:
-  tags: ["*"]
+on:
+  push:
+    tags: ["*"]
 jobs:
   release:
     runs-on: ubuntu-latest
