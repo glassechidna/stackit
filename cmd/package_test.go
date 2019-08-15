@@ -122,7 +122,7 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 		})
 		_ = RootCmd.Execute()
 
-		assert.Regexp(t, regexp.MustCompile(`Uploaded ./func to s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/[a-f0-9]{32}.zip \(v = [^)]+\)
+		assert.Regexp(t, regexp.MustCompile(`Uploaded ./func to s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip/[a-f0-9]{32} \(v = [^)]+\)
 \[\d\d:\d\d:\d\d]  test-stack-packaged - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS - Resource creation Initiated
@@ -150,7 +150,7 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 		})
 		_ = RootCmd.Execute()
 
-		assert.Regexp(t, regexp.MustCompile(`./func already exists at s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/[a-f0-9]{32}.zip \(v = [^)]+\)`), buf.String())
+		assert.Regexp(t, regexp.MustCompile(`./func already exists at s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip/[a-f0-9]{32} \(v = [^)]+\)`), buf.String())
 	})
 
 	buf.Reset()

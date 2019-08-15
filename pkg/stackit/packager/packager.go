@@ -62,8 +62,9 @@ func (p *Packager) Package(ctx context.Context, prefix string, templateReader Te
 	errch := make(chan error)
 	for artifactPath, zipPath := range artifacts {
 		go func(artifactPath, zipPath string) {
-			basename, _ := md5path(zipPath)
-			key := strings.TrimPrefix(fmt.Sprintf("%s/%s.zip", prefix, basename), "/")
+			hash, _ := md5path(zipPath)
+			basename := strings.TrimSuffix(filepath.Base(artifactPath), ".zip")
+			key := strings.TrimPrefix(fmt.Sprintf("%s/%s.zip/%s", prefix, basename, hash), "/")
 			up, err := p.Upload(ctx, key, zipPath)
 			uploads[artifactPath] = up
 			errch <- errors.Wrap(err, "uploading zip to s3")
