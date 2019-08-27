@@ -6,9 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v2"
 	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestUsefulErrorIfTemplateDoesntExist(t *testing.T) {
@@ -109,6 +111,10 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 	RootCmd.SetOutput(out)
 
 	t.Run("up", func(t *testing.T) {
+		// to ensure the first run doesn't report "object already exists"
+		err := ioutil.WriteFile("../sample/func/random.txt", []byte(time.Now().String()), 0644)
+		assert.NoError(t, err)
+
 		RootCmd.SetArgs([]string{
 			"up",
 			"--stack-name", "test-stack-packaged",
@@ -116,7 +122,7 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 		})
 		_ = RootCmd.Execute()
 
-		assert.Regexp(t, regexp.MustCompile(`Uploaded ./func to s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip \(v = [^)]+\)
+		assert.Regexp(t, regexp.MustCompile(`Uploaded ./func to s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip/[a-f0-9]{32} \(v = [^)]+\)
 \[\d\d:\d\d:\d\d]  test-stack-packaged - CREATE_IN_PROGRESS - User Initiated
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]         FunctionRole - CREATE_IN_PROGRESS - Resource creation Initiated
@@ -129,7 +135,22 @@ func TestPackageAndExecuteE2E(t *testing.T) {
 \[\d\d:\d\d:\d\d] FunctionVersion\S+ - CREATE_COMPLETE 
 \[\d\d:\d\d:\d\d]    FunctionAliaslive - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]    FunctionAliaslive - CREATE_IN_PROGRESS - Resource creation Initiated
-\[\d\d:\d\d:\d\d]    FunctionAliaslive - CREATE_COMPLETE`), buf.String())
+\[\d\d:\d\d:\d\d]    FunctionAliaslive - CREATE_COMPLETE 
+\[\d\d:\d\d:\d\d]  test-stack-packaged - CREATE_COMPLETE 
+`), buf.String())
+	})
+
+	buf.Reset()
+
+	t.Run("up second time", func(t *testing.T) {
+		RootCmd.SetArgs([]string{
+			"up",
+			"--stack-name", "test-stack-packaged",
+			"--template", "../sample/serverless.yml",
+		})
+		_ = RootCmd.Execute()
+
+		assert.Regexp(t, regexp.MustCompile(`./func already exists at s3://stackit-ap-southeast-2-607481581596/test-stack-packaged/func.zip/[a-f0-9]{32} \(v = [^)]+\)`), buf.String())
 	})
 
 	buf.Reset()

@@ -72,7 +72,12 @@ func TestUp_DoesntHangWhenCreationCancelled(t *testing.T) {
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_IN_PROGRESS - Resource creation Initiated
 \[\d\d:\d\d:\d\d]             LogGroup - CREATE_COMPLETE 
+(\[\d\d:\d\d:\d\d]              TaskDef - CREATE_IN_PROGRESS)? 
+(\[\d\d:\d\d:\d\d]              TaskDef - CREATE_IN_PROGRESS - Resource creation Initiated)?
+(\[\d\d:\d\d:\d\d]              TaskDef - CREATE_COMPLETE )?
 \[\d\d:\d\d:\d\d] test-cancelled-stack - DELETE_IN_PROGRESS - User Initiated
+(\[\d\d:\d\d:\d\d]              TaskDef - DELETE_IN_PROGRESS)? 
+(\[\d\d:\d\d:\d\d]              TaskDef - DELETE_COMPLETE )?
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_IN_PROGRESS 
 \[\d\d:\d\d:\d\d]             LogGroup - DELETE_COMPLETE 
 \[\d\d:\d\d:\d\d] test-cancelled-stack - DELETE_COMPLETE 

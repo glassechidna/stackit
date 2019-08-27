@@ -1,0 +1,15 @@
+name: Release
+on:
+  push:
+    tags: ["*"]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: goreleaser
+        uses: ./
+        env:
+          GORELEASER_GITHUB_TOKEN: ${{ secrets.GORELEASER_GITHUB_TOKEN }}
+        with:
+          args: sh -c "GITHUB_TOKEN=$GORELEASER_GITHUB_TOKEN goreleaser"
