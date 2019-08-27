@@ -2,11 +2,13 @@ package packager
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 )
 
 func (p *Packager) s3BucketName() (string, error) {
@@ -37,6 +39,10 @@ func (p *Packager) s3BucketName() (string, error) {
 	if err != nil {
 		if err, ok := err.(awserr.Error); ok {
 			if err.Code() == s3.ErrCodeNoSuchBucket {
+
+				tags := getStackitTags()
+				fmt.Println(tags)
+
 				_, err := p.s3.CreateBucket(&s3.CreateBucketInput{Bucket: &bucketName})
 				if err != nil {
 					return "", errors.Wrap(err, "creating s3 bucket")
@@ -63,4 +69,12 @@ func (p *Packager) s3BucketName() (string, error) {
 
 	p.cachedBucketName = bucketName
 	return bucketName, nil
+}
+
+func getStackitTags() string {
+	tags := viper.GetString("stackit-tags")
+	if tags == "" {
+		return ""
+	}
+	return "loadsa tags"
 }
