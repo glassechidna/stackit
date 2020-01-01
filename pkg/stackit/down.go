@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- TailStackEvent) error {
-	stack, err := s.Describe(stackName)
+	stack, err := s.Describe(ctx, stackName)
 
 	if stack != nil { // stack exists
 		token := generateToken()
@@ -16,7 +16,7 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 			StackName:          stack.StackId,
 			ClientRequestToken: &token,
 		}
-		_, err = s.api.DeleteStack(input)
+		_, err = s.api.DeleteStackWithContext(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -31,12 +31,12 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 		if *finalEvent.ResourceStatus == cloudformation.ResourceStatusDeleteFailed {
 			token = generateToken()
 			input.ClientRequestToken = &token
-			input.RetainResources, err = s.resourcesToBeRetainedDuringDelete(*stack.StackId, events)
+			input.RetainResources, err = s.resourcesToBeRetainedDuringDelete(ctx, *stack.StackId, events)
 			if err != nil {
 				return errors.Wrap(err, "determining resources to be kept")
 			}
 
-			_, err = s.api.DeleteStack(input)
+			_, err = s.api.DeleteStackWithContext(ctx, input)
 			if err != nil {
 				return errors.Wrap(err, "deleting stack")
 			}
@@ -53,10 +53,10 @@ func (s *Stackit) Down(ctx context.Context, stackName string, events chan<- Tail
 	return nil
 }
 
-func (s *Stackit) resourcesToBeRetainedDuringDelete(stackName string, events chan<- TailStackEvent) ([]*string, error) {
+func (s *Stackit) resourcesToBeRetainedDuringDelete(ctx context.Context, stackName string, events chan<- TailStackEvent) ([]*string, error) {
 	var names []*string
 
-	err := s.api.ListStackResourcesPages(&cloudformation.ListStackResourcesInput{StackName: &stackName}, func(page *cloudformation.ListStackResourcesOutput, lastPage bool) bool {
+	err := s.api.ListStackResourcesPagesWithContext(ctx, &cloudformation.ListStackResourcesInput{StackName: &stackName}, func(page *cloudformation.ListStackResourcesOutput, lastPage bool) bool {
 		for _, resource := range page.StackResourceSummaries {
 			if *resource.ResourceStatus == cloudformation.ResourceStatusDeleteFailed {
 				names = append(names, resource.LogicalResourceId)
