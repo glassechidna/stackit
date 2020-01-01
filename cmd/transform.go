@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -45,7 +46,7 @@ var transformCmd = &cobra.Command{
 			panic(err)
 		}
 
-		processed, err := sit.Transform(string(original), params)
+		processed, err := sit.Transform(context.Background(), string(original), params)
 		if err != nil {
 			panic(err)
 		}

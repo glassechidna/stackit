@@ -144,11 +144,11 @@ func up(cmd *cobra.Command, args []string) error {
 	}
 
 	stackId := *prepared.Output.StackId
-	if success, _ := sit.IsSuccessfulState(stackId); !success {
+	if success, _ := sit.IsSuccessfulState(ctx, stackId); !success {
 		return errUnsuccessfulStack
 	}
 
-	sit.PrintOutputs(stackId, cmd.OutOrStdout())
+	sit.PrintOutputs(ctx, stackId, cmd.OutOrStdout())
 	return nil
 }
 
