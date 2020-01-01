@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/glassechidna/stackit/cmd/honey"
 	"log"
 	"os"
 )
@@ -38,6 +39,7 @@ func awsSession(profile, region string) *session.Session {
 
 	sess, _ := session.NewSessionWithOptions(sessOpts)
 	sess.Handlers.Build.PushFrontNamed(userAgentHandler)
+	honey.TryAdd(sess)
 
 	return sess
 }

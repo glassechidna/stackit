@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/glassechidna/stackit/cmd/honey"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -113,7 +114,8 @@ func up(cmd *cobra.Command, args []string) error {
 	sess := awsSession(profile, region)
 	sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 
-	ctx := context.Background()
+	ctx, end := honey.RootContext()
+	defer end()
 
 	printerCtx, printerCancel := context.WithCancel(ctx)
 	defer printerCancel()

@@ -15,10 +15,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/glassechidna/stackit/cmd/honey"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -46,7 +46,10 @@ var transformCmd = &cobra.Command{
 			panic(err)
 		}
 
-		processed, err := sit.Transform(context.Background(), string(original), params)
+		ctx, end := honey.RootContext()
+		defer end()
+
+		processed, err := sit.Transform(ctx, string(original), params)
 		if err != nil {
 			panic(err)
 		}

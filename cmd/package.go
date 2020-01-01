@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/glassechidna/stackit/cmd/honey"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/glassechidna/stackit/pkg/stackit/packager"
 	"github.com/olekukonko/tablewriter"
@@ -118,8 +119,11 @@ package will:
 				return
 			}
 
+			ctx, end := honey.RootContext()
+			defer end()
+
 			sess := awsSession(profile, region)
-			packagedTemplate, err := packageTemplate(context.Background(), sess, prefix, template, cmd.OutOrStderr())
+			packagedTemplate, err := packageTemplate(ctx, sess, prefix, template, cmd.OutOrStderr())
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "%+v\n", err)
 				return
