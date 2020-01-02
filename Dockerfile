@@ -1,3 +1,3 @@
 FROM gcr.io/distroless/static
-COPY stackit /
-CMD ["/stackit"]
+COPY stackit /usr/bin/
+CMD ["/usr/bin/stackit"]
