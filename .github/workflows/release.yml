@@ -13,6 +13,12 @@ jobs:
         with:
           go-version: 1.13.x
 
+      - name: docker login
+        uses: Azure/docker-login@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
       - name: goreleaser
         uses: goreleaser/goreleaser-action@v1
         with:

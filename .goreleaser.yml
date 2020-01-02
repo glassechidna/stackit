@@ -30,6 +30,9 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+dockers:
+  - image_templates:
+      - glassechidna/stackit
 nfpm:
   vendor: stackit
   homepage: https://github.com/glassechidna/stackit
