@@ -40,7 +40,6 @@ func (p *Packager) s3BucketName() (string, error) {
 	if err != nil {
 		if err, ok := err.(awserr.Error); ok {
 			if err.Code() == s3.ErrCodeNoSuchBucket {
-
 				_, err := p.s3.CreateBucket(&s3.CreateBucketInput{Bucket: &bucketName})
 				if err != nil {
 					return "", errors.Wrap(err, "creating s3 bucket")
