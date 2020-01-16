@@ -2,6 +2,7 @@ package packager
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -40,9 +41,6 @@ func (p *Packager) s3BucketName() (string, error) {
 		if err, ok := err.(awserr.Error); ok {
 			if err.Code() == s3.ErrCodeNoSuchBucket {
 
-				tags := getStackitTags()
-				fmt.Println(tags)
-
 				_, err := p.s3.CreateBucket(&s3.CreateBucketInput{Bucket: &bucketName})
 				if err != nil {
 					return "", errors.Wrap(err, "creating s3 bucket")
@@ -67,14 +65,50 @@ func (p *Packager) s3BucketName() (string, error) {
 		}
 	}
 
+	addTags := func() error {
+		tags := getStackitTags()
+		_, err := p.s3.PutBucketTagging(&s3.PutBucketTaggingInput{
+			Bucket: &bucketName,
+			Tagging: &s3.Tagging{
+				TagSet: tags,
+			},
+		})
+		return errors.Wrap(err, "adding tags on bucket")
+	}
+
+	cTags, err := p.s3.GetBucketTagging(&s3.GetBucketTaggingInput{Bucket: &bucketName})
+	if tagerror, ok := err.(awserr.Error); ok && tagerror.Code() == "NoSuchTagSet" {
+		err = addTags()
+		if err != nil {
+			return "", err
+		}
+	}
+
 	p.cachedBucketName = bucketName
 	return bucketName, nil
 }
 
-func getStackitTags() string {
+func getStackitTags() []*s3.Tag {
 	tags := viper.GetString("stackit-tags")
 	if tags == "" {
-		return ""
+		return nil
 	}
-	return "loadsa tags"
+
+	tagList := strings.Split(tags,",")
+	tagMap := make(map[string]string)
+	for _, pair := range tagList {
+		dict := strings.Split(pair, "=")
+		tagMap[dict[0]] = dict[1]
+	}
+
+	result := make([]*s3.Tag, 0, len(tagMap))
+	for k, v := range tagMap {
+		var t = &s3.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		}
+		result = append(result, t)
+	}
+
+	return result
 }
