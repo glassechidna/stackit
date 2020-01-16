@@ -76,8 +76,8 @@ func (p *Packager) s3BucketName() (string, error) {
 		return errors.Wrap(err, "adding tags on bucket")
 	}
 
-	cTags, err := p.s3.GetBucketTagging(&s3.GetBucketTaggingInput{Bucket: &bucketName})
-	if tagerror, ok := err.(awserr.Error); ok && tagerror.Code() == "NoSuchTagSet" {
+	_, getTagErr := p.s3.GetBucketTagging(&s3.GetBucketTaggingInput{Bucket: &bucketName})
+	if tagError, ok := getTagErr.(awserr.Error); ok && tagError.Code() == "NoSuchTagSet" {
 		err = addTags()
 		if err != nil {
 			return "", err
