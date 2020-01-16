@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/glassechidna/awsctx/service/cloudformationctx"
 	"time"
 )
 
@@ -12,10 +12,10 @@ type TailStackEvent struct {
 	cloudformation.StackEvent
 }
 
-func eventsWhile(api cloudformationiface.CloudFormationAPI, stackId string, include func(event *cloudformation.StackEvent) bool) ([]*cloudformation.StackEvent, error) {
+func eventsWhile(ctx context.Context, api cloudformationctx.CloudFormation, stackId string, include func(event *cloudformation.StackEvent) bool) ([]*cloudformation.StackEvent, error) {
 	var events []*cloudformation.StackEvent
 
-	err := api.DescribeStackEventsPages(&cloudformation.DescribeStackEventsInput{
+	err := api.DescribeStackEventsPagesWithContext(ctx, &cloudformation.DescribeStackEventsInput{
 		StackName: &stackId,
 	}, func(page *cloudformation.DescribeStackEventsOutput, lastPage bool) bool {
 		for _, event := range page.StackEvents {
@@ -44,11 +44,11 @@ func (s *Stackit) PollStackEvents(ctx context.Context, stackId, token string, ca
 			var events []*cloudformation.StackEvent
 			var err error
 			if mostRecent == nil {
-				events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+				events, err = eventsWhile(ctx, s.api, stackId, func(event *cloudformation.StackEvent) bool {
 					return event.ClientRequestToken != nil && *event.ClientRequestToken == token
 				})
 			} else {
-				events, err = eventsWhile(s.api, stackId, func(event *cloudformation.StackEvent) bool {
+				events, err = eventsWhile(ctx, s.api, stackId, func(event *cloudformation.StackEvent) bool {
 					return event.Timestamp.After(*mostRecent)
 				})
 			}
@@ -70,7 +70,7 @@ func (s *Stackit) PollStackEvents(ctx context.Context, stackId, token string, ca
 
 			mostRecent = events[0].Timestamp
 
-			stack, err := s.Describe(*events[0].StackId)
+			stack, err := s.Describe(ctx, *events[0].StackId)
 			if err != nil {
 				return nil, err
 			}

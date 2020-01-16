@@ -15,9 +15,9 @@
 package cmd
 
 import (
-	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/glassechidna/stackit/cmd/honey"
 	"github.com/glassechidna/stackit/pkg/stackit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,12 +35,15 @@ var tailCmd = &cobra.Command{
 		sess := awsSession(profile, region)
 		sit := stackit.NewStackit(cloudformation.New(sess), sts.New(sess))
 
-		stack, _ := sit.Describe(stackName)
+		ctx, end := honey.RootContext()
+		defer end()
+
+		stack, _ := sit.Describe(ctx, stackName)
 		if stack == nil || stackit.IsTerminalStatus(*stack.StackStatus) {
 			return
 		}
 
-		_, err := sit.PollStackEvents(context.Background(), *stack.StackId, "", func(event stackit.TailStackEvent) {
+		_, err := sit.PollStackEvents(ctx, *stack.StackId, "", func(event stackit.TailStackEvent) {
 			printer.PrintTailEvent(event)
 		})
 		if err != nil {

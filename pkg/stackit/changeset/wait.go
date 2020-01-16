@@ -1,8 +1,9 @@
 package changeset
 
 import (
+	"context"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
+	"github.com/glassechidna/awsctx/service/cloudformationctx"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -16,7 +17,7 @@ func (e *NoOpChangesetError) Error() string {
 	return errNoOp
 }
 
-func Wait(api cloudformationiface.CloudFormationAPI, id string) (*cloudformation.DescribeChangeSetOutput, error) {
+func Wait(ctx context.Context, api cloudformationctx.CloudFormation, id string) (*cloudformation.DescribeChangeSetOutput, error) {
 	status := "CREATE_PENDING"
 	terminal := []string{"CREATE_COMPLETE", "DELETE_COMPLETE", "FAILED"}
 
@@ -24,7 +25,7 @@ func Wait(api cloudformationiface.CloudFormationAPI, id string) (*cloudformation
 	var err error
 
 	for !stringInSlice(terminal, status) {
-		resp, err = api.DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
+		resp, err = api.DescribeChangeSetWithContext(ctx, &cloudformation.DescribeChangeSetInput{
 			ChangeSetName: &id,
 		})
 		if err != nil {

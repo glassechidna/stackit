@@ -1,0 +1,86 @@
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+  Alias:
+    Type: String
+    Default: live
+Resources:
+  FunctionBase:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: World
+          Another: Value
+  CompleteClone:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: World
+          Another: Value
+  CloneWithOverriddenMemory:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 512
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: World
+          Another: Value
+  CloneWithAdditionalField:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: World
+          Another: Value
+      Role: MyRole
+  CloneWithOverridenEnvVars:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: Everyone
+          Another: Value
+  CloneWithAdditionalEnvVars:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 256
+      CodeUri: ./func
+      Timeout: 60
+      AutoPublishAlias: !Ref Alias
+      Environment:
+        Variables:
+          Hello: World
+          Another: Value
+          Third: value

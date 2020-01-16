@@ -22,6 +22,7 @@ func Parse(body []byte) (*CfnYaml, error) {
 		return nil, errors.Wrap(err, "unmarshalling yaml")
 	}
 
+	Resolve(&c.Node)
 	return c, nil
 }
 

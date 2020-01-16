@@ -30,8 +30,8 @@ type StackitUpInput struct {
 	PopulateMissing  bool
 }
 
-func (s *Stackit) populateMissing(input *StackitUpInput) error {
-	stack, _ := s.Describe(input.StackName)
+func (s *Stackit) populateMissing(ctx context.Context, input *StackitUpInput) error {
+	stack, _ := s.Describe(ctx, input.StackName)
 
 	maybeAddParam := func(name, defaultValue *string) {
 		if defaultValue != nil {
@@ -56,7 +56,7 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 			maybeAddParam(param.ParameterKey, nil)
 		}
 	} else {
-		resp, err := s.api.ValidateTemplate(&cloudformation.ValidateTemplateInput{TemplateBody: aws.String(input.Template.String())})
+		resp, err := s.api.ValidateTemplateWithContext(ctx, &cloudformation.ValidateTemplateInput{TemplateBody: aws.String(input.Template.String())})
 		if err != nil {
 			return err
 		}
@@ -70,14 +70,14 @@ func (s *Stackit) populateMissing(input *StackitUpInput) error {
 }
 
 func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events chan<- TailStackEvent) error {
-	stack, err := s.Describe(stackName)
+	stack, err := s.Describe(ctx, stackName)
 	if err != nil {
 		return err
 	}
 
 	cleanup := func(stackId string) error {
 		token := generateToken()
-		_, err := s.api.DeleteStack(&cloudformation.DeleteStackInput{StackName: &stackId, ClientRequestToken: &token})
+		_, err := s.api.DeleteStackWithContext(ctx, &cloudformation.DeleteStackInput{StackName: &stackId, ClientRequestToken: &token})
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events
 			}
 		}
 
-		stack, err = s.Describe(*stack.StackId)
+		stack, err = s.Describe(ctx, *stack.StackId)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events
 		if *stack.StackStatus == "CREATE_FAILED" || *stack.StackStatus == "ROLLBACK_COMPLETE" {
 			return cleanup(*stack.StackId)
 		} else if *stack.StackStatus == "REVIEW_IN_PROGRESS" {
-			resp, err := s.api.ListStackResources(&cloudformation.ListStackResourcesInput{StackName: stack.StackId})
+			resp, err := s.api.ListStackResourcesWithContext(ctx, &cloudformation.ListStackResourcesInput{StackName: stack.StackId})
 			if err != nil {
 				return err
 			}
@@ -119,8 +119,8 @@ func (s *Stackit) ensureStackReady(ctx context.Context, stackName string, events
 	return nil
 }
 
-func (s *Stackit) awsAccountId() (string, error) {
-	resp, err := s.stsApi.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+func (s *Stackit) awsAccountId(ctx context.Context) (string, error) {
+	resp, err := s.stsApi.GetCallerIdentityWithContext(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", errors.Wrap(err, "getting aws account id")
 	}
@@ -140,13 +140,13 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 		return nil, errors.Wrap(err, "waiting for stack to be in a clean state")
 	}
 
-	stack, err := s.Describe(input.StackName)
+	stack, err := s.Describe(ctx, input.StackName)
 	if err != nil {
 		return nil, errors.Wrap(err, "describing stack")
 	}
 
 	if input.PopulateMissing && stack != nil {
-		err := s.populateMissing(&input)
+		err := s.populateMissing(ctx, &input)
 		if err != nil {
 			return nil, errors.Wrap(err, "populating missing parameters")
 		}
@@ -171,7 +171,7 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 
 	if roleArn := input.RoleARN; len(roleArn) > 0 {
 		if !strings.HasPrefix(roleArn, "arn:aws:iam") {
-			accountId, err := s.awsAccountId()
+			accountId, err := s.awsAccountId(ctx)
 			if err != nil {
 				return nil, errors.Wrap(err, "retrieving aws account id from sts")
 			}
@@ -186,14 +186,14 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 		createInput.ChangeSetType = aws.String(cloudformation.ChangeSetTypeCreate)
 	}
 
-	resp, err := s.api.CreateChangeSet(createInput)
+	resp, err := s.api.CreateChangeSetWithContext(ctx, createInput)
 	if err != nil {
 		return nil, errors.Wrap(err, "creating change set")
 	}
 
-	change, err := changeset.Wait(s.api, *resp.Id)
+	change, err := changeset.Wait(ctx, s.api, *resp.Id)
 	if _, ok := err.(*changeset.NoOpChangesetError); ok {
-		_, err = s.api.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
+		_, err = s.api.DeleteChangeSetWithContext(ctx, &cloudformation.DeleteChangeSetInput{ChangeSetName: resp.Id})
 		return nil, errors.Wrap(err, "waiting for no-op changeset to delete")
 	}
 
@@ -202,7 +202,7 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 		return nil, errors.Wrap(err, "waiting for changeset to stabilise")
 	}
 
-	getResp, err := s.api.GetTemplate(&cloudformation.GetTemplateInput{
+	getResp, err := s.api.GetTemplateWithContext(ctx, &cloudformation.GetTemplateInput{
 		ChangeSetName: resp.Id,
 		StackName:     resp.StackId,
 		TemplateStage: aws.String(cloudformation.TemplateStageProcessed),
@@ -222,7 +222,7 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 func (s *Stackit) Execute(ctx context.Context, stackId, changeSetId string, events chan<- TailStackEvent) error {
 	token := generateToken()
 
-	_, err := s.api.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
+	_, err := s.api.ExecuteChangeSetWithContext(ctx, &cloudformation.ExecuteChangeSetInput{
 		ChangeSetName:      &changeSetId,
 		ClientRequestToken: &token,
 	})
