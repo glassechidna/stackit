@@ -157,7 +157,7 @@ func (s *Stackit) Prepare(ctx context.Context, input StackitUpInput, events chan
 	createInput := &cloudformation.CreateChangeSetInput{
 		ChangeSetName:       aws.String(fmt.Sprintf("%s-csid-%d", input.StackName, time.Now().Unix())),
 		StackName:           &input.StackName,
-		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"}),
+		Capabilities:        aws.StringSlice([]string{"CAPABILITY_IAM", "CAPABILITY_NAMED_IAM", "CAPABILITY_AUTO_EXPAND"}),
 		Parameters:          input.Parameters,
 		Tags:                mapToTags(input.Tags),
 		NotificationARNs:    aws.StringSlice(input.NotificationARNs),
