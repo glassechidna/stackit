@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func Zip(path string) (string, error) {
@@ -73,6 +74,11 @@ func addFileToZip(zw *zip.Writer, topPath, path string) error {
 	if err != nil {
 		return err
 	}
+
+	// we intentionally ignore the file's modtime because if the _content_ of the zip file
+	// is the same (as determined by an md5) then we will skip an upload altogether. this
+	// date was chosen because jan 1st 1970 can sometimes look like a bug - this is deliberate.
+	fh.Modified = time.Date(1989, 4, 25, 0, 0, 0, 0, time.UTC).UTC()
 
 	relPath, err := filepath.Rel(topPath, path)
 	if err != nil {
