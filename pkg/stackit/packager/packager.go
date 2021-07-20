@@ -5,30 +5,35 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/glassechidna/stackit/pkg/stackit/cfnyaml"
 	"github.com/glassechidna/stackit/pkg/zipper"
 	"github.com/pkg/errors"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type Packager struct {
-	s3     s3iface.S3API
-	sts    stsiface.STSAPI
-	region string
+	s3       s3iface.S3API
+	sts      stsiface.STSAPI
+	region   string
+	s3Suffix string
+	s3Tags   string
 
 	cachedBucketName string
 }
 
-func New(s3 s3iface.S3API, sts stsiface.STSAPI, region string) *Packager {
+func New(s3 s3iface.S3API, sts stsiface.STSAPI, region string, s3Suffix string, s3Tags string) *Packager {
 	return &Packager{
-		s3:     s3,
-		sts:    sts,
-		region: region,
+		s3:       s3,
+		sts:      sts,
+		region:   region,
+		s3Suffix: s3Suffix,
+		s3Tags:   s3Tags,
 	}
 }
 

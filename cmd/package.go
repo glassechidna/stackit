@@ -18,6 +18,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -27,17 +34,11 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"text/template"
 )
 
-func packageTemplate(ctx context.Context, sess *session.Session, prefix string, templateReader packager.TemplateReader, writer io.Writer) (*string, error) {
+func packageTemplate(ctx context.Context, sess *session.Session, prefix string, s3suffix string, s3Tags string, templateReader packager.TemplateReader, writer io.Writer) (*string, error) {
 	s3api := s3.New(sess)
-	pkger := packager.New(s3api, sts.New(sess), *s3api.Config.Region)
+	pkger := packager.New(s3api, sts.New(sess), *s3api.Config.Region, s3suffix, s3Tags)
 	packagedTemplate, err := pkger.Package(ctx, prefix, templateReader, writer)
 	if err != nil {
 		return nil, errors.Wrap(err, "packaging template")
@@ -112,6 +113,8 @@ package will:
 			profile, _ := cmd.PersistentFlags().GetString("profile")
 			templatePath, _ := cmd.PersistentFlags().GetString("template")
 			prefix, _ := cmd.PersistentFlags().GetString("prefix")
+			s3Suffix, _ := cmd.PersistentFlags().GetString("s3Suffix")
+			s3Tags, _ := cmd.PersistentFlags().GetString("s3Tags")
 
 			template, err := pathToTemplate(templatePath)
 			if err != nil {
@@ -123,7 +126,7 @@ package will:
 			defer end()
 
 			sess := awsSession(profile, region)
-			packagedTemplate, err := packageTemplate(ctx, sess, prefix, template, cmd.OutOrStderr())
+			packagedTemplate, err := packageTemplate(ctx, sess, prefix, s3Suffix, s3Tags, template, cmd.OutOrStderr())
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "%+v\n", err)
 				return

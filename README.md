@@ -81,6 +81,12 @@ your stack in a different region.
 
 ## Additional Flags
 
+* `--stackit-s3-suffix "random"`
+If the s3 bucket stackit creates requires a unique S3 bucket name.
+
+* `--stackit-tags "key=val,key2=val2"`
+If the s3 bucket stackit creates requires tags, you can add them with this flag.
+
 TODO: Document these properly
 
 * `--service-role VAL`
