@@ -17,6 +17,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -25,9 +29,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"strings"
 )
 
 func printUntilDone(ctx context.Context, events <-chan stackit.TailStackEvent, w io.Writer) {
@@ -65,6 +66,8 @@ func parseCLIInput(cmd *cobra.Command, args []string) stackit.StackitUpInput {
 	template, _ := cmd.PersistentFlags().GetString("template")
 	tags, _ := cmd.PersistentFlags().GetStringSlice("tag")
 	notificationArns, _ := cmd.PersistentFlags().GetStringSlice("notification-arn")
+	s3Suffix, _ := RootCmd.PersistentFlags().GetString("stackit-s3-suffix")
+	s3Tags, _ := RootCmd.PersistentFlags().GetString("stackit-tags")
 
 	input := stackit.StackitUpInput{
 		StackName:       stackName,
@@ -101,6 +104,14 @@ func parseCLIInput(cmd *cobra.Command, args []string) stackit.StackitUpInput {
 		input.Tags = keyvalSliceToMap(tags)
 	}
 
+	if s3Suffix != "" {
+		input.S3Suffix = fmt.Sprintf("-%s", s3Suffix)
+	}
+
+	if s3Tags != "" {
+		input.S3Tags = s3Tags
+	}
+
 	return input
 }
 
@@ -121,7 +132,7 @@ func up(cmd *cobra.Command, args []string) error {
 	defer printerCancel()
 
 	if templateFile, ok := input.Template.(*templateReader); ok && templateFile != nil {
-		template, err := packageTemplate(ctx, sess, input.StackName, templateFile, cmd.OutOrStderr())
+		template, err := packageTemplate(ctx, sess, input.StackName, input.S3Suffix, input.S3Tags, templateFile, cmd.OutOrStderr())
 		if err != nil {
 			return errors.Wrap(err, "packaging template")
 		}

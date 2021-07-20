@@ -3,14 +3,15 @@ package stackit
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/glassechidna/stackit/pkg/stackit/changeset"
 	"github.com/pkg/errors"
-	"strings"
-	"time"
 )
 
 type Template interface {
@@ -28,6 +29,8 @@ type StackitUpInput struct {
 	Tags             map[string]string
 	NotificationARNs []string
 	PopulateMissing  bool
+	S3Suffix         string
+	S3Tags           string
 }
 
 func (s *Stackit) populateMissing(ctx context.Context, input *StackitUpInput) error {

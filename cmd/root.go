@@ -53,6 +53,8 @@ func init() {
 	RootCmd.PersistentFlags().String("region", "", "")
 	RootCmd.PersistentFlags().String("profile", "", "")
 	RootCmd.PersistentFlags().String("stack-name", "", "")
+	RootCmd.PersistentFlags().String("stackit-s3-suffix", "", "")
+	RootCmd.PersistentFlags().String("stackit-tags", "", "")
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports Persistent Flags, which, if defined here,

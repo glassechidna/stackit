@@ -2,6 +2,8 @@ package packager
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -20,7 +22,8 @@ func (p *Packager) s3BucketName() (string, error) {
 	}
 
 	accountId := *getAccountResp.Account
-	bucketName := fmt.Sprintf("stackit-%s-%s", p.region, accountId)
+	// s3Suffix comes with a "-" if its set in params
+	bucketName := fmt.Sprintf("stackit-%s-%s%s", p.region, accountId, p.s3Suffix)
 
 	enableVersioning := func() error {
 		_, err := p.s3.PutBucketVersioning(&s3.PutBucketVersioningInput{
@@ -47,6 +50,19 @@ func (p *Packager) s3BucketName() (string, error) {
 					return "", err
 				}
 
+				if p.s3Tags != "" {
+					tags := getStackitTags(p.s3Tags)
+					_, err := p.s3.PutBucketTagging(&s3.PutBucketTaggingInput{
+						Bucket: &bucketName,
+						Tagging: &s3.Tagging{
+							TagSet: tags,
+						},
+					})
+					if err != nil {
+						return "", errors.Wrap(err, "Adding tags on bucket ")
+					}
+				}
+
 				p.cachedBucketName = bucketName
 				return bucketName, nil
 			}
@@ -63,4 +79,25 @@ func (p *Packager) s3BucketName() (string, error) {
 
 	p.cachedBucketName = bucketName
 	return bucketName, nil
+}
+
+func getStackitTags(tags string) []*s3.Tag {
+
+	tagList := strings.Split(tags, ",")
+	tagMap := make(map[string]string)
+	for _, pair := range tagList {
+		dict := strings.Split(pair, "=")
+		tagMap[dict[0]] = dict[1]
+	}
+
+	result := make([]*s3.Tag, 0, len(tagMap))
+	for k, v := range tagMap {
+		var t = &s3.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		}
+		result = append(result, t)
+	}
+
+	return result
 }
